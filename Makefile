@@ -1,14 +1,14 @@
 CC=gcc
 CFLAGS=-m32 -c -Wall -fno-builtin -fno-stack-protector -Iincludes  
 LD=ld
-LDFLAGS=-L bin -T linker.ld -static	
+LDFLAGS=-m elf_i386 -L bin -T linker.ld -static	
 	
 AS=nasm
 ASFLAGS=-felf32
 LODEV=/dev/loop0
 
 All:	mkdir kernel.bin
-	mbchk kernel.bin
+	-mbchk kernel.bin
 mkdir:
 	-mkdir bin
 bin/print.o:
