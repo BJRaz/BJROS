@@ -1,5 +1,40 @@
-int print() {
-	//__asm__(".intel_syntax noprefix");
-	__asm__("movl $0x2f4b2f4f,  0xb8008");
-	return 64;	
+//
+// implementation of _clean, and _putchar
+// BJR jan 2020
+// 
+// todo:
+// error handling
+// input-routines 
+// cursor-routines
+//
+#include <stdio.h>
+
+#define VIDEO	0xB8000
+#define VIDEO_X	80
+#define VIDEO_Y	24
+#define ATTRIBUTE 0xF
+
+unsigned int 	vx = 0;
+unsigned int 	vy = 1;
+unsigned char* video = (unsigned char*)VIDEO;
+
+void _clean() 
+{
+	video = (unsigned char*)VIDEO;
+	for(int i=0;i<VIDEO_X * (VIDEO_Y + 1) * 2;i++)
+	{
+		video[i] = 0;
+	}
+}
+
+void _putchar(char c) 
+{
+	if(c == '\n')
+	{
+		video = (unsigned char*)VIDEO + (VIDEO_X * vy++ * 2);	// mult by 2 to account for attrbute + char (2 bytes)
+		return;
+	}
+	*video++ = c;		//0x4b;	// char
+	*video++ = ATTRIBUTE;	// 0xaf;	// attribute
+	
 } 

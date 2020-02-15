@@ -1,4 +1,7 @@
-/* test af et custom linker script til ld.*/
+/* custom linker script til ld.
+ *	BJR 2020
+ *
+ * */
 
 SECTIONS
 {

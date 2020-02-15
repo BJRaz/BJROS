@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-m32 -c -Wall -fno-builtin -fno-stack-protector -Iincludes  
+CFLAGS=-std=c99 -m32 -c -Wall -fno-builtin -fno-stack-protector -Iincludes  
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static	
 	
@@ -11,7 +11,7 @@ All:	mkdir kernel.bin
 	-mbchk kernel.bin
 mkdir:
 	-mkdir bin
-bin/print.o:
+bin/print.o:	kernel/stdio/print.c
 	$(CC) $(CFLAGS) -o bin/print.o kernel/stdio/print.c
 bin/kernel.o:	bin/print.o
 	$(CC) $(CFLAGS) -o bin/kernel.o kernel/kernel.c

@@ -1,4 +1,16 @@
 ; implementation of atoi
+; BJR jan 2020
+; converts an (unsigned) ascii number i.e. 842 to base 10
+;
+; arguments:
+; 	char*  - ascii string to convert.
+; returns:
+;	the converted number as base 10 in eax
+;
+; todo:
+;	implement conversion of signed numbers	
+;	error handling
+;
 section .text
 global _atoi
 _atoi:
@@ -34,10 +46,7 @@ _atoi:
 	mov	ecx, eax	;
 	jmp	.calc
 .cont:
-	
-		
 	mov	eax, ebx	; returns ebx ascii -> int	
-
 	mov	esp, ebp	; restore basepointer
 	pop	ebp
 

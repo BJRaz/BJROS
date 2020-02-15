@@ -1,8 +1,8 @@
-;org 0x100000	; addresses start origin - only enable if format is binary	
+;org 0x100000				; addresses start origin - only enable if format is binary	
+					; implemented by BJR dec 2019/ jan 2020
+bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protected mode
 
-bits 32		; forces nasm to generate a 32-bit image for 32-bit processor protected mode
-
-extern kmain	; kmail is kernel main function ing if binary format.
+extern kmain				; kmail is kernel main function ing if binary format.
 
 section .text
 global _start
@@ -19,7 +19,7 @@ multiboot_header:
 	dd	0			; bss end addr.
 	dd	multiboot_entry		; entry addr.
 multiboot_entry:
-	; do some work
+	; do some work (test only)
 	mov 	dword [0xb8000],videotext ; writes text on screen	
 	mov	edx, 16 
 	
@@ -32,7 +32,6 @@ multiboot_entry:
 
 
 section .data
-message:		db	"Hello, world",13,10,0
 MB_HEADER_MAGIC		equ	0x1badb002
 MB_HEADER_FLAGS		equ	0x00010003
 MB_HEADER_CHECKSUM	equ	-(MB_HEADER_MAGIC+MB_HEADER_FLAGS)
