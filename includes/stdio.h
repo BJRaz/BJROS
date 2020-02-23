@@ -2,3 +2,5 @@
 int _atoi(const char*);
 int _strlen(const char*);
 void _putchar(const char);
+void _itoa(int, char*);
+
