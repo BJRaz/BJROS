@@ -2,10 +2,10 @@
 
 int main() 
 {
-	int number = 842;
+	int number = 0;
 	char buffer[20];
 	_itoa(number, buffer);
 
-//	printf("Buffer: %s\n", buffer);
+	printf("Buffer: %s\n", buffer);
 	return 0;
 }

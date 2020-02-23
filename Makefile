@@ -16,8 +16,8 @@ MOUNTPOINT=/mnt/floppy
 
 vpath %.h includes
 
-all:	mkdir kernel.bin
-	-mbchk kernel.bin
+all:	kernel.bin
+
 mkdir:
 	-mkdir bin
 #print.o: print.c 
@@ -35,14 +35,15 @@ itoa.o: itoa.asm
 	$(AS) $(ASFLAGS) $^ -o $@  
 kernel.bin: $(OBJS) kernel.o 
 	$(LD) $(LDFLAGS) $^ -o kernel.bin
+	-mbchk kernel.bin
 # -l:itoa.o -l:multiboot.o -l:kernel.o -l:print.o -l:atoi.o -l:strlen.o 
 clean:
 	-rm -f -r $(OBJS) kernel.o
 	-rm -f $(IMG)	
 	-rm -f kernel.bin
 	-rm -f test
-tests:	itoa.c
-	$(CC) $(CFLAGS) -g -o test $^ 
+tests:	itoa.c itoa.o
+	$(CC) -g -o test $^ 
 $(IMG):	kernel.bin $(GRUBFILE) 
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440
 	losetup $(LODEV) $(IMG)
