@@ -15,10 +15,10 @@ _itoa:
 .countchars:	
 	div	ebx		; divide edx:eax by 10 (ebx), result -> eax, remainder -> edx
 	push	edx
-	cmp	eax, 0		;
-	je	.continue
 	xor	edx, edx
 	inc	ecx
+	cmp	eax, 0		;
+	je	.continue
 	jmp	.countchars
 .continue:
 	pop	eax		;
@@ -26,8 +26,9 @@ _itoa:
 	stosb	
 	cmp	esp, ebp
 	jne	.continue
-	mov	eax, 0		;
+	mov	eax, 0		; store '\0' at end of string
 	stosb			;		
+	mov	eax, ecx	; return count of chars
 	mov	esp, ebp
 	pop	ebp
 

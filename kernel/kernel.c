@@ -11,7 +11,7 @@ int kmain(void* multiboot_structure, void* magicvalue) {
 
 	_itoa(1000, buffer);
 	
-	char* text = "System halted\n";
+	char* text = "Welcome to Brians kernel...\nSystem halted\n";
 	int len = print(text);
 	return len;	
 } 

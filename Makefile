@@ -42,10 +42,11 @@ clean:
 	-rm -f $(IMG)	
 	-rm -f kernel.bin
 	-rm -f test
-tests:	itoa.c itoa.o
-	$(CC) -g -o test $^ 
-$(IMG):	kernel.bin $(GRUBFILE) 
+tests:	itoa.c atoi.o itoa.o 
+	$(CC) -g -I. -o test $^ 
+$(IMG):	 
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440
+grub:	$(IMG) kernel.bin $(GRUBFILE) 
 	losetup $(LODEV) $(IMG)
 	mkfs $(LODEV)
 	mount $(LODEV) $(MOUNTPOINT)
@@ -56,7 +57,5 @@ $(IMG):	kernel.bin $(GRUBFILE)
 	grub --device-map=/dev/null --batch < $(GRUBFILE) 
 	umount $(MOUNTPOINT)
 	losetup -d $(LODEV)
-install: $(IMG) 
+install: grub
 	cp $(IMG) $(OUTPUT)
-brian: 	
-	echo $^

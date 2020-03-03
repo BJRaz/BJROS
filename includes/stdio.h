@@ -3,7 +3,7 @@
 #define STDIO_H
 
 int _atoi(const char*);
-void _itoa(int, char*);
+int _itoa(int, char*);
 int _strlen(const char*);
 void _putchar(const char);
 

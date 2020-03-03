@@ -19,17 +19,17 @@ multiboot_header:
 	dd	0			; bss end addr.
 	dd	multiboot_entry		; entry addr.
 multiboot_entry:
-	; do some work (test only)
-	mov 	dword [0xb8000],videotext ; writes text on screen	
-	mov	edx, 16 
-	
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
 	
  	call 	kmain			; call kernel main function
 
 	hlt
-
+_kmain:	
+	; do some work (test only)
+	mov 	dword [0xb8000],videotext ; writes text on screen	
+	mov	eax, 16			; dummy kernel main function
+	ret
 
 section .data
 MB_HEADER_MAGIC		equ	0x1badb002

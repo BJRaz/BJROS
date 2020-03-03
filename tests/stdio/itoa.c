@@ -1,11 +1,17 @@
 #include <stdio.h>
+#include <includes/stdio.h>
 
-int main() 
+int main(int argc, void** argv) 
 {
-	int number = 0;
+	char* arg1 = 0;
+
+	if(argc > 1)
+		arg1 = (char*)argv[1];
+
+	int number = _atoi(arg1);
 	char buffer[20];
-	_itoa(number, buffer);
+	int result = _itoa(number, buffer);
 
 	printf("Buffer: %s\n", buffer);
-	return 0;
+	return result;
 }

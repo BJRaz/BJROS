@@ -22,6 +22,8 @@ _atoi:
 	mov 	edi, esi	;
 	xor	eax, eax
 	mov	ebx, eax	;
+	cmp	esi, 0		; check if argument points to 0
+	je	.cont
 	mov	ecx, 1
 .loop:
 	cmp	byte [esi], 0
