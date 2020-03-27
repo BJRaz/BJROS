@@ -22,7 +22,9 @@ multiboot_entry:
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
 	
- 	call 	kmain			; call kernel main function
+ 	call 	kmain			;_kmain			; call kernel main function
+
+	mov	eax, cs			; move content of Code Section to eax (cs = hidden, visible)
 
 	hlt
 _kmain:	

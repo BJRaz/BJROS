@@ -48,7 +48,7 @@ $(IMG):
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440
 grub:	$(IMG) kernel.bin $(GRUBFILE) 
 	losetup $(LODEV) $(IMG)
-	mkfs $(LODEV)
+	mkfs.vfat -F 16 -v $(LODEV)
 	mount $(LODEV) $(MOUNTPOINT)
 	mkdir -p $(MOUNTPOINT)/boot/grub
 	cp /usr/share/grub/i386-redhat/stage[12] $(MOUNTPOINT)/boot/grub
