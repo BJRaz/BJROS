@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c99 -m32 -c -Wall -fno-builtin -fno-stack-protector -Iincludes 
+CFLAGS=-std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes 
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static	
 	
@@ -35,7 +35,7 @@ itoa.o: itoa.asm
 	$(AS) $(ASFLAGS) $^ -o $@  
 kernel.bin: $(OBJS) kernel.o 
 	$(LD) $(LDFLAGS) $^ -o kernel.bin
-	-mbchk kernel.bin
+	-mbchk $@
 # -l:itoa.o -l:multiboot.o -l:kernel.o -l:print.o -l:atoi.o -l:strlen.o 
 clean:
 	-rm -f -r $(OBJS) kernel.o
