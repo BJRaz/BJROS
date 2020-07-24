@@ -22,7 +22,7 @@ multiboot_entry:
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
 	
- 	call 	_kmain			;_kmain			; call kernel main function
+ 	call 	kmain			;_kmain			; call kernel main function
 
 	mov	eax, cs			; move content of Code Section to eax (cs = hidden, visible)
 
@@ -32,47 +32,47 @@ _kmain:	; dummy kernel main function
 	;mov 	dword [0xb8000],videotext ; writes text on screen	
 	mov	eax, 16			
 	;call 	disable_cursor
-	mov	esi, text
-	call 	print
+	;mov	esi, text
+	;call 	print
 	mov	ax, 5			; y 
-	mov	bx, 5			; x
+	mov	bx, 15			; x
 	call	cursor
 	; do some out/in on vga mem to init cursor, and move cursor.
 	ret
 cursor:
 .setcoords:
-	; input bx=x, ax=y
+	; input bx = x, ax = y
 	; this calculates to position as: y * vga.w(80) + x	
-	mov	dl, vga.w		; (provided x = 5, y = 5) mov 80 to dl 
+	mov	dl, vga.w		; (provided x = 5, y = 5) mov 80 (columns) to dl 
 	mul	dl			; ax = al * dl -> ax = 5 * 80 -> 400 
 	add	bx, ax			; bx = 5 + 400 -> 405 is the position (0000 0001 1001 0101)
 .setoffset:
 	; input bx = cursor offset
-	mov	dx, 0x3d4
+	mov	dx, 0x3d4		; select CRT index register
 	mov	al, 0x0F
-	out 	dx, al			; write 0x0f to select cursor location low register 0x0F
+	out 	dx, al			; write 0x0f index to select cursor location low register
 
-	inc	dl			; 0x3d5 (data)
+	inc	dl			; select CRT data register 0x3d5 
 	mov	al, bl			; bl -> al
 	out	dx, al			; write (1001 0101) to cursor location low register
 
-	dec	dl			; 0x3d4
+	dec	dl			; select CRT index register 0x3d4
 	mov	al, 0x0E		; 
 	out	dx, al			; write 0x0e to select cursor location high register
 
-	inc	dl			; 0x3d5 (data)
+	inc	dl			; select CRT data register
 	mov	al, bh			; bh -> al
 	out	dx, al			; write (0000 0001) to cursor location high register
 	ret
 	
 disable_cursor:
-	mov	dx, 0x3d4		;
-	mov	al, 0x0a		; 
+	mov	dx, 0x3d4		; select CRT index register
+	mov	al, 0x0a		; set index 
 	out	dx, al			; disable cursor (bit 5 in cursor start register)
 	
-	inc	dx
-	mov	al, 00100000b		; 
-	out	dx, al			;
+	inc	dx			; select CRT data register
+	mov	al, 00100000b		; set data		 
+	out	dx, al			; write data
 	
 	ret
 print:

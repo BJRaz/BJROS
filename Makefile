@@ -59,3 +59,7 @@ grub:	$(IMG) kernel.bin $(GRUBFILE)
 	losetup -d $(LODEV)
 install: grub
 	cp $(IMG) $(OUTPUT)
+bochs: install
+	bochs "boot:floppy" "floppya: 1_44=floppy.img, status=inserted"
+qemu: install
+	qemu -fda floppy.img 
