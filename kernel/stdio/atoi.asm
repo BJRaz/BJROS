@@ -1,9 +1,9 @@
 ; implementation of atoi
-; author: BJR jan 2020
+; author: Brian Juul Rasmussen jan 2020
 ; version:
 ;	0.1
 ;	0.2 added check for negative numbers
-; converts an (unsigned) ascii number i.e. 842 to base 10
+; converts an (signed) ascii number i.e. 842 to base 10
 ; 
 ; arguments:
 ; 	char*  - ascii string to convert.
@@ -33,7 +33,7 @@ _atoi:
 .negative:
 	inc 	esi		; increment esi pass '-'
 	mov 	edi, esi	;
-	mov	word [esp], 1		; bool value indicates negative number		
+	mov	word [esp], 1	; bool value indicates negative number		
 .init:
 	mov	ecx, 1		; mulplicator
 .loop:

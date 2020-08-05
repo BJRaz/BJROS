@@ -1,5 +1,5 @@
 ;org 0x100000				; addresses start origin - only enable if format is binary	
-					; implemented by BJR dec 2019/ jan 2020
+					; implemented by Brian Juul Rasmussen dec 2019/ jan 2020
 bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protected mode
 
 extern kmain				; kmail is kernel main function ing if binary format.
@@ -34,8 +34,8 @@ _kmain:	; dummy kernel main function
 	;call 	disable_cursor
 	;mov	esi, text
 	;call 	print
-	mov	ax, 5			; y 
-	mov	bx, 15			; x
+	mov	ax, 0			; y 
+	mov	bx, 80			; x
 	call	cursor
 	; do some out/in on vga mem to init cursor, and move cursor.
 	ret

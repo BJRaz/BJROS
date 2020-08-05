@@ -1,13 +1,12 @@
 //
 // implementation of _clean, and _putchar
-// BJR jan 2020
+// Brian Juul Rasmussen jan 2020
 // 
 // todo:
 // error handling
 // input-routines 
 // cursor-routines
 //
-#include <stdio.h>
 
 #define VIDEO	0xB8000			// VGA color text buffer (mode 3)
 #define VIDEO_X	80

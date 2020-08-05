@@ -1,5 +1,5 @@
 ; conversion of integer to char*
-; author: bjr
+; author: Brian Juul Rasmussen jan 2020 
 ; arguments:
 ; 	integer to convert
 ;	buffer to contain chars
@@ -24,10 +24,9 @@ _itoa:
 	not	eax		; 2 complement calculation
 	add	eax, 1		;
 	mov	word [esp], 2dh	; minus sign '
-;	inc	ecx
+	; inc	ecx
 .countchars:	
 	div	ebx		; divide edx:eax by 10 (ebx), result -> eax, remainder -> edx
-
 	push	edx
 	xor	edx, edx
 	inc	ecx
@@ -39,7 +38,9 @@ _itoa:
 	sub	ebx, 4
 	cmp	word [ebp-4], 2dh	;
 	jne	.addchars		
-	push	2dh-30h;		word [ebp-4]		;mov	eax, [ebp-4]	;
+	push	2dh-30h         
+	; word [ebp-4]		
+	; mov	eax, [ebp-4]	
 .addchars:
 	pop	eax		;
 	add	eax, 30h	;

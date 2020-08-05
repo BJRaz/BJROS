@@ -4,7 +4,7 @@ LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static	
 	
 AS=nasm
-ASFLAGS=-felf32 -Fdwarf
+ASFLAGS=-felf32 -Fdwarf 
 LODEV=/dev/loop0
 OBJS=multiboot.o atoi.o itoa.o strlen.o print.o 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
@@ -14,17 +14,12 @@ OUTPUT=/media/sf_VBoxLinuxShare/binaries/floppy.img
 IMG=floppy.img
 MOUNTPOINT=/mnt/floppy
 
-vpath %.h includes
+vpath %.h includes					# search for specific filetypes in <dir>
 
 all:	kernel.bin
 
 mkdir:
 	-mkdir bin
-#print.o: print.c 
-#	$(CC) $(CFLAGS) $^ -o $@ 
-#kernel.o: kernel.c  
-#	$(CC) $(CFLAGS) $^ -o $@
-
 multiboot.o: mymultiboot.asm
 	$(AS) $(ASFLAGS) $^ -o $@  
 atoi.o: atoi.asm
@@ -36,13 +31,12 @@ itoa.o: itoa.asm
 kernel.bin: $(OBJS) kernel.o 
 	$(LD) $(LDFLAGS) $^ -o kernel.bin
 	-mbchk $@
-# -l:itoa.o -l:multiboot.o -l:kernel.o -l:print.o -l:atoi.o -l:strlen.o 
 clean:
 	-rm -f -r $(OBJS) kernel.o
 	-rm -f $(IMG)	
 	-rm -f kernel.bin
 	-rm -f test
-tests:	itoa.c atoi.o itoa.o 
+tests:	itoa.c atoi.o itoa.o print.o 
 	$(CC) -g -I. -o test $^ 
 $(IMG):	 
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440

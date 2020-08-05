@@ -1,6 +1,6 @@
 ; Name _strlen
 ; This program receives a string as argument 1, and return the length of the string
-; BJR jan 2020
+; Brian Juul Rasmussen jan 2020
 ;
 ; arguments:
 ;	char* - string to count length
