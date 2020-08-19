@@ -2,14 +2,16 @@
 //
 #include <stdio.h>
 #include <includes/stdio.h>
+#define DEBUG
 
 void printverylong();
 int kprintf(const char* format, ...);
 
 int main(int argc, void** argv) 
 {
-
-	kprintf("Hest: %d\n", 200);
+	int result = 0;
+	kprintf("Her: %s, %d\n", "Brian", 200);
+/*
 	printverylong();
 	
 	char* arg1 = 0;
@@ -24,7 +26,7 @@ int main(int argc, void** argv)
 	int result = _itoa(number, buffer);
 
 	printf("Buffer: %s\n", buffer);
-
+*/
 	return result;
 }
 
@@ -37,7 +39,7 @@ void printverylong()
 	
 	printf("Very long: %llu\n", verylong);
 }
-
+/*
 int kprintf(const char* format, ...)
 {
 	int count = 0;
@@ -68,4 +70,4 @@ int kprintf(const char* format, ...)
 		format++;
 		count++;
 	}
-}
+}*/

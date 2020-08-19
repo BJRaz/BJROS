@@ -15,7 +15,7 @@
 ;	error handling
 ;
 section .text
-global _atoi
+global _atoi:function
 _atoi:
 	; ascii char string as only argument  
 	

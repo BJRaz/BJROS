@@ -15,7 +15,7 @@
 
 section .text
 
-global _strlen
+global _strlen:function
 _strlen:
 	; read string address from stack
 	; set esi to point to address

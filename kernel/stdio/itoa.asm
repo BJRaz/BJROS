@@ -9,7 +9,7 @@
 ; Todo:
 ; 	some error checking
 section .text
-global _itoa
+global _itoa:function
 _itoa:
 	push	ebp
 	mov	ebp, esp	; store basepoiner on stack

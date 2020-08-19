@@ -2,11 +2,15 @@
 // implementation of _clean, and _putchar
 // Brian Juul Rasmussen jan 2020
 // 
+// aug 2020: added kprintf, kprint and kprintln
+//
 // todo:
 // error handling
 // input-routines 
 // cursor-routines
 //
+
+#include <stdio.h>
 
 #define VIDEO	0xB8000			// VGA color text buffer (mode 3)
 #define VIDEO_X	80
@@ -35,5 +39,65 @@ void _putchar(char c)
 	}
 	*video++ = c;		// 0x4b;	char
 	*video++ = ATTRIBUTE;	// 0xaf;	attribute
-	
 } 
+
+int kprint(const char* text) {
+	//__asm__(".intel_syntax noprefix");
+	// __asm__("movl $0xaf4b2f4f,  0xb8008");
+
+	int i = 0;
+	for(;i<_strlen(text);i++)
+	{
+		char c = text[i];
+		_putchar(c);		
+	}	
+	return i;	
+}
+
+int kprintln(const char* text) {
+	int i =	kprint(text);
+	_putchar('\n');
+	return i+1;	
+}
+
+int kprintf(const char* format, ...)
+{
+	int count = 0;
+	void* args = &format + 1;
+
+	while(*format != '\0')
+	{
+		
+		switch(*format) 
+		{
+			case '%':
+				format++;
+				switch(*format)
+				{
+					case 'd':	// convert to decimal (signed)
+					{
+						char buf[20];
+						_itoa(*(int*)args, buf);
+						kprint(buf);
+						args = 4 + (char*)args;
+						format++;
+					}
+					break;
+					case 's':	// string
+					{
+						kprint(*(char**)args);	
+						args = 4 + (char*)args;
+						format++;
+					}
+					break;
+				}
+			break;
+			
+		}
+		
+		_putchar(*format);
+		format++;
+		count++;
+	}
+	return count;
+}

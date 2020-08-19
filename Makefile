@@ -1,10 +1,10 @@
 CC=gcc
-CFLAGS=-std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes 
+CFLAGS=-Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -g 
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static	
 	
 AS=nasm
-ASFLAGS=-felf32 -Fdwarf 
+ASFLAGS=-felf32 -Fdwarf  
 LODEV=/dev/loop0
 OBJS=multiboot.o atoi.o itoa.o strlen.o print.o 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
@@ -36,7 +36,7 @@ clean:
 	-rm -f $(IMG)	
 	-rm -f kernel.bin
 	-rm -f test
-tests:	itoa.c atoi.o itoa.o print.o 
+tests:	itoa.c atoi.o itoa.o print.o strlen.o 
 	$(CC) -g -I. -o test $^ 
 $(IMG):	 
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440
@@ -57,3 +57,6 @@ bochs: install
 	bochs "boot:floppy" "floppya: 1_44=floppy.img, status=inserted"
 qemu: install
 	qemu -fda floppy.img 
+TAGS:
+	ctags -R .
+

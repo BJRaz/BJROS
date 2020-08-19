@@ -9,5 +9,10 @@ int _itoa(int, char*);
 int _strlen(const char*);
 void _putchar(const char);
 
+int kprint(const char*);
+int kprintln(const char*);
+int kprintf(const char* format, ...);
+
+
 #endif
 

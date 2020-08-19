@@ -3,6 +3,7 @@
 bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protected mode
 
 extern kmain				; kmail is kernel main function ing if binary format.
+global gdt:data
 
 section .text
 global _start
@@ -19,6 +20,9 @@ multiboot_header:
 	dd	0			; bss end addr.
 	dd	multiboot_entry		; entry addr.
 multiboot_entry:
+
+	lgdt	[gdt]			; load global descriptor table register with 6 byte memory value
+
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
 	
@@ -98,5 +102,12 @@ attribute		equ	0x07
 text			db	"Kernel loaded ..",0
 video			equ	0xb8000
 vga.w			equ	80
+; global descriptor table address and count - dont forget to align to 8 bytes boundary
+align	2
+gdt			dw	0x0010
+			dd	0x00200000
 section .bss
+section .gdt	
+			dd 	0x0000ffff
+			dd	0x00cf9b00
 
