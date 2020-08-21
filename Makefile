@@ -6,7 +6,7 @@ LDFLAGS=-m elf_i386 -L bin -T linker.ld -static
 AS=nasm
 ASFLAGS=-felf32 -Fdwarf  
 LODEV=/dev/loop0
-OBJS=multiboot.o atoi.o itoa.o strlen.o print.o 
+OBJS=multiboot.o atoi.o itoa.o utoa.o strlen.o print.o 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
 
 GRUBFILE=setup_grub.txt
@@ -28,6 +28,8 @@ strlen.o: strlen.asm
 	$(AS) $(ASFLAGS) $^ -o $@  
 itoa.o: itoa.asm
 	$(AS) $(ASFLAGS) $^ -o $@  
+utoa.o: utoa.asm
+	$(AS) $(ASFLAGS) $^ -o $@
 kernel.bin: $(OBJS) kernel.o 
 	$(LD) $(LDFLAGS) $^ -o kernel.bin
 	-mbchk $@
@@ -36,7 +38,7 @@ clean:
 	-rm -f $(IMG)	
 	-rm -f kernel.bin
 	-rm -f test
-tests:	itoa.c atoi.o itoa.o print.o strlen.o 
+tests:	itoa.c atoi.o itoa.o utoa.o print.o strlen.o 
 	$(CC) -g -I. -o test $^ 
 $(IMG):	 
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440

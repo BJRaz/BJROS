@@ -22,6 +22,8 @@ int kmain(void* multiboot_structure, void* magicvalue) {
 	kprintf("Kernel test output from kprintf '-190000000': %d\n", -190000000);
 	kprintf(" -  string 'Brian': %s\n", "Brian");
 	kprintf(" -  string 'Brian' and number '200': %s, %d\n", "Brian", 200);
+	_utoa(4000000000, buffer);
+	kprintf(" -  '4000000000': %s\n", buffer);
 
 	kprintln(buffer);
 	

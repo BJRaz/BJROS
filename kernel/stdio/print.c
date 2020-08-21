@@ -76,8 +76,17 @@ int kprintf(const char* format, ...)
 				{
 					case 'd':	// convert to decimal (signed)
 					{
-						char buf[20];
+						char buf[11];
 						_itoa(*(int*)args, buf);
+						kprint(buf);
+						args = 4 + (char*)args;
+						format++;
+					}
+					break;
+					case 'u':	// convert to decimal (unsigned)
+					{
+						char buf[11];
+						_utoa(*(int*)args, buf);
 						kprint(buf);
 						args = 4 + (char*)args;
 						format++;

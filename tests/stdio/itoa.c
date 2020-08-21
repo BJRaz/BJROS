@@ -9,24 +9,25 @@ int kprintf(const char* format, ...);
 
 int main(int argc, void** argv) 
 {
-	int result = 0;
-	kprintf("Her: %s, %d\n", "Brian", 200);
-/*
-	printverylong();
-	
 	char* arg1 = 0;
 
 	if(argc > 1)
 		arg1 = (char*)argv[1];
 
 	int number = _atoi(arg1);
-	printf("Number: %d\n", number);
-	
-	char buffer[20];
-	int result = _itoa(number, buffer);
 
-	printf("Buffer: %s\n", buffer);
-*/
+	int result = 0;
+	char buffer[20];
+	_utoa(number, buffer);
+	printf("utoa: %s\n", buffer);
+
+	result = _itoa(number, buffer);
+	printf("itoa: %s\n", buffer);
+
+
+	printverylong();
+	
+		kprintf("Her: %s, %d\n", "Brian", 200);
 	return result;
 }
 

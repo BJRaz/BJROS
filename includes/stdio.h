@@ -6,6 +6,7 @@
 
 int _atoi(const char*);
 int _itoa(int, char*);
+int _utoa(unsigned int, char*);
 int _strlen(const char*);
 void _putchar(const char);
 
