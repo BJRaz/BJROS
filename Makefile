@@ -1,12 +1,12 @@
 CC=gcc
 CFLAGS=-Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -g 
 LD=ld
-LDFLAGS=-m elf_i386 -L bin -T linker.ld -static	
+LDFLAGS=-m elf_i386 -L bin -T linker.ld -static 	
 	
 AS=nasm
 ASFLAGS=-felf32 -Fdwarf  
 LODEV=/dev/loop0
-OBJS=multiboot.o atoi.o itoa.o utoa.o strlen.o print.o 
+OBJS=multiboot.o atoi.o atou.o itoa.o utoa.o strlen.o print.o 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
 
 GRUBFILE=setup_grub.txt
@@ -24,6 +24,8 @@ multiboot.o: mymultiboot.asm
 	$(AS) $(ASFLAGS) $^ -o $@  
 atoi.o: atoi.asm
 	$(AS) $(ASFLAGS) $^ -o $@  
+atou.o: atou.asm
+	$(AS) $(ASFLAGS) $^ -o $@  
 strlen.o: strlen.asm
 	$(AS) $(ASFLAGS) $^ -o $@  
 itoa.o: itoa.asm
@@ -37,8 +39,9 @@ clean:
 	-rm -f -r $(OBJS) kernel.o
 	-rm -f $(IMG)	
 	-rm -f kernel.bin
-	-rm -f test
-tests:	itoa.c atoi.o itoa.o utoa.o print.o strlen.o 
+	-rm -f test 
+	-rm -f tags
+tests:	itoa.c atoi.o atou.o itoa.o utoa.o print.o strlen.o 
 	$(CC) -g -I. -o test $^ 
 $(IMG):	 
 	dd if=/dev/zero of=$(IMG) bs=1024 count=1440

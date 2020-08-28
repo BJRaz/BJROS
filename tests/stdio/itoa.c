@@ -16,6 +16,11 @@ int main(int argc, void** argv)
 
 	int number = _atoi(arg1);
 
+	unsigned int unumber = _atou(arg1);
+
+	printf("unumber: %u\n", unumber);
+
+
 	int result = 0;
 	char buffer[20];
 	_utoa(number, buffer);

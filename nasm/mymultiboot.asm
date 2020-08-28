@@ -4,6 +4,7 @@ bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protec
 
 extern kmain				; kmail is kernel main function ing if binary format.
 global gdt:data
+global idt_start:data			; start of interrupt descriptor table
 
 section .text
 global _start
@@ -22,6 +23,7 @@ multiboot_header:
 multiboot_entry:
 
 	lgdt	[gdt]			; load global descriptor table register with 6 byte memory value
+	lidt	[idt]			;
 
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
@@ -30,10 +32,15 @@ multiboot_entry:
 
 	mov	eax, cs			; move content of Code Section to eax (cs = hidden, visible)
 
+	int	0x20
+
 	hlt
+
+
+
 _kmain:	; dummy kernel main function
 	; do some work (test only)
-	;mov 	dword [0xb8000],videotext ; writes text on screen	
+	;mov 	dword [0xb8000],VIDEOTEXT ; writes text on screen	
 	mov	eax, 16			
 	;call 	disable_cursor
 	;mov	esi, text
@@ -46,8 +53,8 @@ _kmain:	; dummy kernel main function
 cursor:
 .setcoords:
 	; input bx = x, ax = y
-	; this calculates to position as: y * vga.w(80) + x	
-	mov	dl, vga.w		; (provided x = 5, y = 5) mov 80 (columns) to dl 
+	; this calculates to position as: y * VGA.W(80) + x	
+	mov	dl, VGA.W		; (provided x = 5, y = 5) mov 80 (columns) to dl 
 	mul	dl			; ax = al * dl -> ax = 5 * 80 -> 400 
 	add	bx, ax			; bx = 5 + 400 -> 405 is the position (0000 0001 1001 0101)
 .setoffset:
@@ -80,34 +87,67 @@ disable_cursor:
 	
 	ret
 print:
-	mov	ecx, video
+	mov	ecx, VGA_VIDEO
 .loop:
 	lodsb
 	cmp	al, 0
 	je	.exit
 	mov	byte [ecx], al
 	inc	ecx
-	mov	byte [ecx], attribute
+	mov	byte [ecx], VIDEOATT
 	inc	ecx
 	jmp	.loop
 .exit:
 	ret
+; interrupt service routines:
+section .isr
+divition_by_zero:
+	mov		eax, 0x1
+	mov		gs, eax
+	iret
+
+
+
 
 section .data
 MB_HEADER_MAGIC		equ	0x1badb002
 MB_HEADER_FLAGS		equ	0x00010003
 MB_HEADER_CHECKSUM	equ	-(MB_HEADER_MAGIC+MB_HEADER_FLAGS)
-videotext		equ	0xff65ff65
-attribute		equ	0x07
+VIDEOTEXT		equ	0xff65ff65
+VIDEOATT		equ	0x07
 text			db	"Kernel loaded ..",0
-video			equ	0xb8000
-vga.w			equ	80
+text2			db	"Halted...", 0
+VGA_VIDEO			equ	0xb8000
+VGA.W			equ	80
 ; global descriptor table address and count - dont forget to align to 8 bytes boundary
 align	2
-gdt			dw	0x0010
-			dd	0x00200000
-section .bss
-section .gdt	
-			dd 	0x0000ffff
-			dd	0x00cf9b00
+gdt			dw	0x0010		; count of entries
+			dd	0x00200000	; address
+idt			dw	0x01ff		; count of entries
+			dd	0x00202000	; address
 
+section .bss
+; this is the global descriptor table. The address is set via linker script (for section .gdt)
+; can contain a maximem of 2^13 (8192) entries, and entry 0 is not used (called a null segment descriptor) 
+section .gdt
+			db	11111100b	; first segment descriptor (not used)
+			db	00000000b
+			dw 	00000000b
+			dw	00000000b
+			dw	00000000b
+
+			dd 	0x0000ffff	; base address (16-31), segment limit (0-15)
+			dd	0x00cf9b00	; base adderss, type etc, segment limit, base ...
+; this is the interrupt descriptor table. The address is set via linker script (for section .idt)
+; can contain a maximum of 256 entries
+section .idt
+idt_start:
+			times 256	db 0
+	
+			dw	0x01dc		; offset B
+			dw	0x0008		; segment 
+			db	0x0
+			db	10001111b
+			dw	0x0011		; offset A			
+
+			
