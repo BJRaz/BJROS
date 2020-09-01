@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c99 -m32 -c -Wall -fno-builtin -fno-stack-protector -Iincludes 
+CFLAGS=-std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes 
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static	
 	
