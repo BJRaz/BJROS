@@ -1,9 +1,8 @@
-; implementation of atoi
-; author: Brian Juul Rasmussen jan 2020
+; implementation of atou
+; author: Brian Juul Rasmussen aug 2020
 ; version:
 ;	0.1
-;	0.2 added check for negative numbers
-; converts an (signed) ascii number i.e. 842 to base 10
+; converts an (unsigned) ascii number i.e. 842 to base 10
 ; 
 ; arguments:
 ; 	char*  - ascii string to convert.
@@ -11,12 +10,11 @@
 ;	the converted number as base 10 in eax
 ;
 ; todo:
-;	implement conversion of signed numbers	
 ;	error handling
 ;
 section .text
-global _atoi:function
-_atoi:
+global _atou:function
+_atou:
 	; ascii char string as only argument  
 	
 	push	ebp		; store basepointer
@@ -28,18 +26,11 @@ _atoi:
 	mov	ebx, eax	;
 	cmp	esi, 0		; check if argument points to 0 (empty string)
 	je	.cont
-	cmp 	byte [esi], 2Dh	; ascii 2Dh eq '-' (minus)
-	jne	.init		;
-.negative:
-	inc 	esi		; increment esi pass '-'
-	mov 	edi, esi	;
-	mov	word [esp], 1	; bool value indicates negative number		
 .init:
 	mov	ecx, 1		; mulplicator
 .loop:
 	cmp	byte [esi], 0	; if end of string '\0'
 	je	.calc
-	;push 	ax		; 
 	inc	esi		; increments esi
 	jmp	.loop
 .calc:

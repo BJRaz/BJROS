@@ -9,5 +9,10 @@ SECTIONS
 	.text : { *(.text) }
 	. = 0x110000; /**/
 	.data : { *(.data) }
-	.bss : { *(.bss) }  
+	.bss : { *(.bss) }
+	.rodata : { *(.rodata) }
+	. = 0x200000;  
+	.gdt : { *(.gdt) }
+	. = 0x202000;
+	.idt : { *(.idt) }
 }
