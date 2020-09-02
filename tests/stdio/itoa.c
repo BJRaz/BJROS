@@ -1,11 +1,13 @@
 // Brian Juul Rasmussen 2020
 //
 #include <stdio.h>
+#include <stdint.h>
 #include <includes/stdio.h>
 #define DEBUG
 
 void printverylong();
 int kprintf(const char* format, ...);
+void testuinttohex(uint32_t number);
 
 int main(int argc, void** argv) 
 {
@@ -13,27 +15,40 @@ int main(int argc, void** argv)
 
 	if(argc > 1)
 		arg1 = (char*)argv[1];
-
+	// test _atoi
 	int number = _atoi(arg1);
 
+	// test _atou
 	unsigned int unumber = _atou(arg1);
 
 	printf("unumber: %u\n", unumber);
 
-
+	// test _utoa
 	int result = 0;
 	char buffer[20];
 	_utoa(number, buffer);
 	printf("utoa: %s\n", buffer);
-
+	// test _itoa
 	result = _itoa(number, buffer);
 	printf("itoa: %s\n", buffer);
 
-
+	// test _utox (uint to hex)
+	_utox(number, buffer);
+	printf("utox: %s\n", buffer);
+	
+	// misc tests
 	printverylong();
 	
-		kprintf("Her: %s, %d\n", "Brian", 200);
+	testuinttohex(100);
+
+	//kprintf("Her: %s, %d\n", "Brian", 200);
 	return result;
+}
+
+void testuinttohex(uint32_t number)
+{
+	uint8_t rest = number / 16;
+	printf("Rest: %d\n", rest);
 }
 
 void printverylong() 

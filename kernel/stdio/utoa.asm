@@ -1,7 +1,7 @@
 ; conversion of unsigned integer to char*
 ; author: Brian Juul Rasmussen aug 2020 
 ; arguments:
-; 	integer to convert
+; 	unsigned integer to convert
 ;	buffer to contain chars
 ; version:
 ;	0.1

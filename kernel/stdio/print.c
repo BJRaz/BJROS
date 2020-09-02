@@ -74,6 +74,15 @@ int kprintf(const char* format, ...)
 				format++;
 				switch(*format)
 				{
+					case 'x':	// convert to hexadecimal (unsigned)
+					{
+						char buf[11];
+						_utox(*(unsigned int*)args, buf);
+						kprint(buf);	
+						args = 4 + (char*)args;
+						format++;
+					}
+					break;
 					case 'd':	// convert to decimal (signed)
 					{
 						char buf[11];
@@ -86,7 +95,7 @@ int kprintf(const char* format, ...)
 					case 'u':	// convert to decimal (unsigned)
 					{
 						char buf[11];
-						_utoa(*(int*)args, buf);
+						_utoa(*(unsigned int*)args, buf);
 						kprint(buf);
 						args = 4 + (char*)args;
 						format++;
@@ -99,6 +108,7 @@ int kprintf(const char* format, ...)
 						format++;
 					}
 					break;
+				
 				}
 			break;
 			

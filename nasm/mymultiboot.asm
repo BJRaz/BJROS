@@ -3,8 +3,8 @@
 bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protected mode
 
 extern kmain				; kmail is kernel main function ing if binary format.
-global gdt:data
-global idt_start:data			; start of interrupt descriptor table
+global gdtr:data
+global idt:data				; start of interrupt descriptor table
 
 section .text
 global _start
@@ -22,18 +22,20 @@ multiboot_header:
 	dd	multiboot_entry		; entry addr.
 multiboot_entry:
 
-	lgdt	[gdt]			; load global descriptor table register with 6 byte memory value
-	lidt	[idt]			;
+	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
+	lidt	[idtr]			;
 
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
 	
  	call 	kmain			;_kmain			; call kernel main function
 
-	mov	eax, cs			; move content of Code Section to eax (cs = hidden, visible)
+	mov	eax, cs			; (test) stores visible content of Code Section to eax 
+					; at this point the value should be 0d (00000000 00001000) - 1 = index 8
+					; and 0 = GDT, 00 = priviledge level
 
 	int	0x20
-
+	int	0x20			; interrupt index 32
 	hlt
 
 
@@ -121,9 +123,9 @@ VGA_VIDEO			equ	0xb8000
 VGA.W			equ	80
 ; global descriptor table address and count - dont forget to align to 8 bytes boundary
 align	2
-gdt			dw	0x0010		; count of entries
+gdtr			dw	0x0010		; count of entries
 			dd	0x00200000	; address
-idt			dw	0x01ff		; count of entries
+idtr			dw	0x01ff		; count of entries
 			dd	0x00202000	; address
 
 section .bss
@@ -141,13 +143,13 @@ section .gdt
 ; this is the interrupt descriptor table. The address is set via linker script (for section .idt)
 ; can contain a maximum of 256 entries
 section .idt
-idt_start:
+idt:
 			times 256	db 0
 	
 			dw	0x01dc		; offset B
 			dw	0x0008		; segment 
 			db	0x0
-			db	10001111b
+			db	10001110b
 			dw	0x0011		; offset A			
 
 			
