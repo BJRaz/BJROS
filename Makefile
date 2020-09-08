@@ -104,5 +104,5 @@ qemu: install
 	qemu -fda floppy.img 
 TAGS:
 	ctags -R .
-tests:	itoa.c atoi.o atou.o itoa.o utoa.o utox.o print.o strlen.o 
-	$(CC) -g -I. -o test $^ 
+tests:	$(OBJS) itoa.c 
+	$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 

@@ -35,7 +35,7 @@ multiboot_entry:
 					; at this point the value should be 0d (00000000 00001000) - 1 = index 8
 					; and 0 = GDT, 00 = priviledge level
 
-	;int	0x20
+	int	0x0			; interrupt index 0 (div by zero)
 	int	0x20			; interrupt index 32
 	hlt
 
