@@ -27,11 +27,12 @@ struct __attribute__ ((__packed__)) interrupt_gate_descriptor
 void isr_div_by_zero()
 {
 	//i_pushall;
-	//kprintf("DIV BY ZERO Exception");
+	kprintf("DIV BY ZERO Exception - system halted...");
 	__asm__("hlt");
 	//i_popall;
 	i_return;
 }
+
 void isr(unsigned int* arg1, unsigned int *arg2)
 {
 	// TODO: store all relevant regs in stack
@@ -39,7 +40,8 @@ void isr(unsigned int* arg1, unsigned int *arg2)
 	i_pushall;
 	__asm__("mov $2, %eax");
 	__asm__("mov %eax, %gs");	
-	kprintf("ISR args  %x, %x\n", *arg1, *arg2);
+	//kprintf("ISR args  %x, %x\n", *arg1, *arg2); // this won't work if compiled with clang.
+	kprintf("ISR args");
 	i_popall;
 	i_return;
 }
@@ -75,9 +77,9 @@ int kmain(void* multiboot_structure, void* magicvalue) {
 	kprintln(buffer);
 // IDT stuff
 	struct interrupt_gate_descriptor *idt_array = (struct interrupt_gate_descriptor*) &idt;
-	set_isr_entry(idt_array, &isr_div_by_zero);
+	set_isr_entry(idt_array, (unsigned int)&isr_div_by_zero);
 	idt_array+=32;	
-	set_isr_entry(idt_array, &isr);
+	set_isr_entry(idt_array, (unsigned int)&isr);
 	
 	kprintf("IDT baseaddress: 0x%x\n", &idt);
 	kprintf("IDT entry address: 0x%x\n", &idt_array->offset_lo);
@@ -88,6 +90,7 @@ int kmain(void* multiboot_structure, void* magicvalue) {
 	kprintf("IDT offset_hi: 0x%x\n", idt_array->offset_hi);
 
 	kprintf("ISR address: 0x%x\n", &isr);
+	kprintf("ISR address div by zero: 0x%x\n", &isr_div_by_zero);
 
 
 // gdt stuff:	
@@ -104,7 +107,7 @@ int kmain(void* multiboot_structure, void* magicvalue) {
 		_itoa(i, buffer);
 		kprintf("Number: %s\n", buffer);
 	}
-	int calculation = 10 / 0;
+//	int calculation = 10 / 0;
 
 	return len;	
 } 

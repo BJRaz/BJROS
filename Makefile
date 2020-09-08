@@ -1,4 +1,4 @@
-CC=gcc
+CC=clang
 CFLAGS=-Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -g 
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static 	
@@ -6,7 +6,8 @@ LDFLAGS=-m elf_i386 -L bin -T linker.ld -static
 AS=nasm
 ASFLAGS=-felf32 -Fdwarf  
 LODEV=/dev/loop0
-OBJS=multiboot.o atoi.o atou.o itoa.o utoa.o utox.o strlen.o print.o 
+OBJDIR:=bin
+OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o kernel.o) 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
 
 # settings floppy
@@ -23,25 +24,38 @@ LODEVHD=/dev/mapper/loop0p1
 
 vpath %.h includes					# search for specific filetypes in <dir>
 
-all:	kernel.bin
+all: kernel.bin
 
-mkdir:
-	-mkdir bin
-multiboot.o: mymultiboot.asm
-	$(AS) $(ASFLAGS) $^ -o $@  
-atoi.o: atoi.asm
-	$(AS) $(ASFLAGS) $^ -o $@  
-atou.o: atou.asm
-	$(AS) $(ASFLAGS) $^ -o $@  
-strlen.o: strlen.asm
-	$(AS) $(ASFLAGS) $^ -o $@  
-itoa.o: itoa.asm
-	$(AS) $(ASFLAGS) $^ -o $@  
-utoa.o: utoa.asm
-	$(AS) $(ASFLAGS) $^ -o $@
-utox.o: utox.asm
-	$(AS) $(ASFLAGS) $^ -o $@
-kernel.bin: $(OBJS) kernel.o 
+$(OBJS): | $(OBJDIR)
+
+# had to make this rule match *.so (shared object) 
+# when referencing assembly files
+$(OBJDIR)/%.so: %.asm
+	$(AS) $(ASFLAGS) $< -o $@
+# this matches all c-files
+$(OBJDIR)/%.o: %.c
+	$(CC) $(CFLAGS) $< -o $@
+
+
+$(OBJDIR):
+	-mkdir $(OBJDIR) 
+#$(OBJDIR)/multiboot.so: mymultiboot.asm
+#	$(AS) $(ASFLAGS) $^ -o $@  
+#atoi.o: atoi.asm
+#	$(AS) $(ASFLAGS) $^ -o $@  
+#atou.o: atou.asm
+#	$(AS) $(ASFLAGS) $^ -o $@  
+#strlen.o: strlen.asm
+#	$(AS) $(ASFLAGS) $^ -o $@  
+#itoa.o: itoa.asm
+#	$(AS) $(ASFLAGS) $^ -o $@  
+#utoa.o: utoa.asm
+#	$(AS) $(ASFLAGS) $^ -o $@
+#utox.o: utox.asm
+#	$(AS) $(ASFLAGS) $^ -o $@
+#cursor.o: cursor.asm
+#	$(AS) $(ASFLAGS) $^ -o $@
+kernel.bin: $(OBJS)  
 	$(LD) $(LDFLAGS) $^ -o kernel.bin
 	-mbchk $@
 clean:
@@ -51,8 +65,7 @@ clean:
 	-rm -f test 
 	-rm -f tags
 	-rm -f $(IMGHD) 
-tests:	itoa.c atoi.o atou.o itoa.o utoa.o utox.o print.o strlen.o 
-	$(CC) -g -I. -o test $^ 
+	-rm -rf $(OBJDIR)
 $(IMGHD):	 
 	dd if=/dev/zero of=$(IMGHD) bs=1024 count=10000			# makes a hdd image of size 10MB
 	parted $(IMGHD) mklabel msdos mkpart primary 1 10 set 1 boot on # check for 1 10 in start, end for mkpart !
@@ -91,4 +104,5 @@ qemu: install
 	qemu -fda floppy.img 
 TAGS:
 	ctags -R .
-
+tests:	itoa.c atoi.o atou.o itoa.o utoa.o utox.o print.o strlen.o 
+	$(CC) -g -I. -o test $^ 

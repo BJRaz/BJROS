@@ -39,7 +39,7 @@ _utox:
 	add	eax, 30h	;
 	jmp	.storebyte
 .upperchars:
-	add	eax, 37h	; TODO
+	add	eax, 37h	; TODO 10 -> A, 11 -> B etc.
 .storebyte:
 	stosb	
 	cmp	esp, ebx

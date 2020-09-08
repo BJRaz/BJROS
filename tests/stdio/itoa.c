@@ -6,10 +6,10 @@
 #define DEBUG
 
 void printverylong();
-int kprintf(const char* format, ...);
+int _kprintf(const char* format, ...);
 void testuinttohex(uint32_t number);
 
-int main(int argc, void** argv) 
+int main(int argc, char** argv) 
 {
 	char* arg1 = 0;
 
@@ -41,7 +41,7 @@ int main(int argc, void** argv)
 	
 	testuinttohex(100);
 
-	//kprintf("Her: %s, %d\n", "Brian", 200);
+	_kprintf("Her: %d\n", 200);
 	return result;
 }
 
@@ -60,11 +60,11 @@ void printverylong()
 	
 	printf("Very long: %llu\n", verylong);
 }
-/*
-int kprintf(const char* format, ...)
+
+int _kprintf(const char* format, ...)
 {
 	int count = 0;
-	int *args = (int*)&format + 1;
+	int *args = (int*)&format + 4;
 
 	while(*format != '\0')
 	{
@@ -75,11 +75,37 @@ int kprintf(const char* format, ...)
 				format++;
 				switch(*format)
 				{
-					case 'd':
+					case 'x':	// convert to hexadecimal (unsigned)
 					{
-						char buf[20];
-						 _itoa(*args, buf);
-						printf("%s", buf);
+						char buf[11];
+						_utox(*(unsigned int*)args, buf);
+						printf(buf);	
+						args = 4 + (char*)args;
+						format++;
+					}
+					break;
+					case 'd':	// convert to decimal (signed)
+					{
+						char buf[11];
+						_itoa(*(int*)args, buf);
+						printf(buf);
+						args = 4 + (char*)args;
+						format++;
+					}
+					break;
+					case 'u':	// convert to decimal (unsigned)
+					{
+						char buf[11];
+						_utoa(*(unsigned int*)args, buf);
+						printf(buf);
+						args = 4 + (char*)args;
+						format++;
+					}
+					break;
+					case 's':	// string
+					{
+						printf(*(char**)args);	
+						args = 4 + (char*)args;
 						format++;
 					}
 					break;
@@ -91,4 +117,5 @@ int kprintf(const char* format, ...)
 		format++;
 		count++;
 	}
-}*/
+	return count;
+}
