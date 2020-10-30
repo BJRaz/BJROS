@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -g 
+CFLAGS=-Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -Imultiboot -g 
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static 	
 	

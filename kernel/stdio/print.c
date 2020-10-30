@@ -14,7 +14,7 @@
 
 #define VIDEO	0xB8000			// VGA color text buffer (mode 3)
 #define VIDEO_X	80
-#define VIDEO_Y	24
+#define VIDEO_Y	25
 #define ATTRIBUTE 0x07			// attribute byte 7(blink), 654(backcolor), 3(fg bright bit), 210(forecolor)
 
 unsigned int 	vx = 0;
@@ -24,17 +24,31 @@ unsigned char* video = (unsigned char*)VIDEO;
 void _clean() 
 {
 	video = (unsigned char*)VIDEO;
-	for(int i=0;i<VIDEO_X * (VIDEO_Y + 1) * 2;i++)
+	for(int i=0;i<VIDEO_X * VIDEO_Y * 2;i++)
 	{
 		video[i] = 0;
 	}
 }
 
+extern void _scrollup();
+
 void _putchar(char c) 
 {
 	if(c == '\n')
 	{
-		video = (unsigned char*)VIDEO + (VIDEO_X * ++vy * 2);	// mult by 2 to account for attrbute + char (2 bytes)
+		if(vy < VIDEO_Y)
+			video = (unsigned char*)VIDEO + (VIDEO_X * vy * 2);	// mult by 2 to account for attrbute + char (2 bytes)
+		if(vy >= VIDEO_Y)
+		{	
+			_scrollup();
+		/*	for(int i=0;i<160;i++)
+			{
+				*video++ = 0;		
+			}*/
+			video = (unsigned char*)VIDEO + VIDEO_X * (VIDEO_Y-1) * 2 ;	
+			return;	
+		}
+		vy++;
 		return;
 	}
 	*video++ = c;		// 0x4b;	char
@@ -65,7 +79,7 @@ int kprintf(const char* format, ...)
 	int count = 0;
 	void* args = (int*)(&format + 4);	// TODO: in clang +4, in gcc this has to be add with +1
 
-	while(*format != '\0')
+	while(*format != '\0')			// TODO: optimize this 
 	{
 		
 		switch(*format) 
@@ -73,7 +87,9 @@ int kprintf(const char* format, ...)
 			case '%':
 				format++;
 				switch(*format)
-				{
+				{		
+				
+					// TODO: optimize to include some base-number
 					case 'x':	// convert to hexadecimal (unsigned)
 					{
 						char buf[11];
@@ -88,7 +104,7 @@ int kprintf(const char* format, ...)
 						char buf[11];
 						_itoa(*(int*)args, buf);
 						kprint(buf);
-						args = 4 + (char*)args;
+						args = 1 + (int*)args;
 						format++;
 					}
 					break;
