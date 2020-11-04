@@ -24,7 +24,7 @@ LODEVHD=/dev/mapper/loop0p1
 
 vpath %.h includes					# search for specific filetypes in <dir>
 
-all: kernel.bin
+all: kernel.bin TAGS
 
 $(OBJS): | $(OBJDIR)
 

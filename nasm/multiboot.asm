@@ -28,10 +28,14 @@ bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protec
 
 %define STACK_SIZE	0x4000
 %define	VIDEO		0xb8000		; VIDEO address for text color mode
+%define VGA_ROWS	25
+%define	VGA_COLS	80
+%define VGA_BYTES_ROW	160		; in vga text mode 3 - 80x25 16 colors uses 2 bytes mem pr character
 extern kmain				; kmail is kernel main function ing if binary format.
 extern cursor
 extern print
 extern kprintf
+extern _putchar
 
 global gdtr:data
 global idt:data				; start of interrupt descriptor table
@@ -61,7 +65,7 @@ multiboot_entry:
 	push	ebx			; address of multiboot structure
 	
 	call 	setup_pic		; init of PIC (programmable interrupt controller)
-	call 	setup_interrupts	; setup interrupt service routines etc..
+	;call 	setup_interrupts	; setup interrupt service routines etc..
 	
 	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
 	lidt	[idtr]			; load interrupt descriptor table register with 6 byte memory value
@@ -87,16 +91,14 @@ mainloop:
 global _scrollup:function
 _scrollup:	
 	pushad
-
-	mov	esi, VIDEO+160
+	mov	esi, VIDEO+VGA_BYTES_ROW
 	mov	edi, VIDEO
-.loop:
-	mov	ecx, 160*24		; count 160 bytes
+	mov	ecx, VGA_BYTES_ROW*VGA_ROWS		; count 160x25 bytes
 	rep	movsb	
 	; clear last line
-	mov	edi, VIDEO+80*2*24
-	mov	eax, 0
-	mov	ecx, 160 
+	mov	edi, VIDEO+VGA_COLS*2*(VGA_ROWS-1)		;
+	mov	eax, 0 
+	mov	ecx, VGA_BYTES_ROW
 	rep 	stosb
 	popad
 	ret
@@ -169,7 +171,7 @@ _kmain:
 ; Notice: is contained within own section
 ; *******
 section .isr
-division_by_zero
+division_by_zero:
 	;mov	esi,    text
 	;call	print
 	push	10
@@ -186,14 +188,30 @@ global keyboard:function
 keyboard: 				; keyboard handler
 	pushad
 	xor	eax, eax
-	in	al, 0x60		; read from keyboard buffer
-	push   	eax 			; TODO: push fails - need to check ss etc...	
-	push 	text4	
-	call 	kprintf
+	in	al, 0x60		; read scancode from keyboard buffer
+	;cmp	al, 0x1c
+	;jne	.cont
+	;call	_scrollup
+.cont:
+;	push   	eax 				
+;	push 	eax
+	mov	ebx, eax		; store scancode
+	and	al, 0x80		; check for bit 7 is 1 (the key is released - aka 'break')
+	cmp	al, 0
+	jnz	.break
+.make:					; otherwize it is a 'make' - key pressed
+	;push	ebx			; arg1 - push the scancode
+	;push	text4			; arg0 - push the format-string
+	;call	kprintf			; print the scancode
+	mov	byte ebx, [kbdarray+ebx]
+	push	ebx	
+	call 	_putchar
+
+	pop	ebx			; reset stack
+	;pop	eax
+.break:
 	mov	al, 0x20		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
-	pop	eax
-	pop	eax
 	popad
 	sti		
 	iret
@@ -234,6 +252,36 @@ section .data
 	text4		db	"Keyboard IRS called %x", 0xa, 0
 	numbertxt	db	"%d", 0xa, 0
 	hextxt		db	"%x", 0xa, 0
+	kbpressed	db	0
+	kbdarray	db	0, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '+', 0, 0x08
+			db 	0x9,	; tab
+			db 	'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 
+			db	0x61,	; å
+			db	'"',
+			db	0x0a, 	; CR (1c)
+			db	0,	; CTRL (1d)
+			db	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 
+			db	0x61, 	; æ (27)
+			db	0x6f, 	; ø (28)
+			db	'$', 	; (29 unknown)
+			db	0,	; shift left (2a)
+			db	0,	; (2b)
+			db	'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '-',
+			db	0, 	; shift right (36)
+			db	'*', 	
+			db	0, 	; alt left (38)
+			db	' ', 	; space (39)
+			db	0, 	; caps lock (3a)
+			db	0, 0, 0, 0, 0, 0, 0, 0, 0, 0	; F1-F10 (3b-44)
+			db	0, 	; (45)
+			db	0,	; (46)
+			db	'7', '8', '9', '-'		; (48 also arrow up)
+			db	'4', '5', '6', '+'		; (4b, 4d) arrow left, arrow right
+			db	'1', '2', '3', 			; (50) arrow down
+			db	'0', ','
+				
+;				
+				 	
 ; *******
 ; GDTR: global descriptor register table setup 
 ; *******
@@ -298,3 +346,4 @@ idt:
 		db	10001110b	; byte 8-12 0D110, byte 13-14 (DPL), 15 P (present flag)
 		dw	0x0011		; offset A			
 		
+

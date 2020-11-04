@@ -11,6 +11,8 @@ extern uint32_t idt;
 extern uint32_t custom;		// references a ISR implemented in nasm/multiboot.asm
 extern uint32_t keyboard;	// references a ISR implemented - 
 
+void prompt();
+
 // need the attribute packed, otherwise the alignment of short limit is 4 bytes
 // yielding a false value. When packed the alignment is 2 bytes  
 struct __attribute__ ((__packed__)) gdtr_register 
@@ -86,6 +88,7 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 	char buffer[20];
 
 	_itoa(result, buffer);
+	kprintf("**************\n");
 	kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
 		multiboot_structure->mem_lower, 
 		multiboot_structure->mem_upper);
@@ -138,6 +141,12 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 	}
 	//int calculation = 10 / 0;
 
+	prompt();
+
 	return len;	
+}
+
+void prompt() {
+	kprintf("> ");
 }
 

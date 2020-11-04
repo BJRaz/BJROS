@@ -21,6 +21,8 @@ unsigned int 	vx = 0;
 unsigned int 	vy = 0;
 unsigned char* video = (unsigned char*)VIDEO;
 
+extern void _scrollup();
+
 void _clean() 
 {
 	video = (unsigned char*)VIDEO;
@@ -30,29 +32,29 @@ void _clean()
 	}
 }
 
-extern void _scrollup();
-
 void _putchar(char c) 
 {
 	if(c == '\n')
 	{
 		if(vy < VIDEO_Y)
-			video = (unsigned char*)VIDEO + (VIDEO_X * vy * 2);	// mult by 2 to account for attrbute + char (2 bytes)
+			video = (unsigned char*)VIDEO + (VIDEO_X * ++vy * 2);	// mult by 2 to account for attrbute + char (2 bytes)
 		if(vy >= VIDEO_Y)
 		{	
+			video = (unsigned char*)0xb8f00;	// (unsigned char*)VIDEO + VIDEO_X * (VIDEO_Y - 1) * 2 ;	
 			_scrollup();
-		/*	for(int i=0;i<160;i++)
-			{
-				*video++ = 0;		
-			}*/
-			video = (unsigned char*)VIDEO + VIDEO_X * (VIDEO_Y-1) * 2 ;	
-			return;	
+			//vy--;
 		}
-		vy++;
 		return;
 	}
+	vx++;
+	
 	*video++ = c;		// 0x4b;	char
 	*video++ = ATTRIBUTE;	// 0xaf;	attribute
+	if(video > 0xb8fa0-2)
+	{
+		_scrollup();
+		video = (unsigned char*)0xb8f00;
+	}
 } 
 
 int kprint(const char* text) {
