@@ -8,6 +8,7 @@ SECTIONS
 	. = 0x100000;
 	.text : { *(.text) }
 	. = 0x110000; /**/
+	.isr : { *(.isr) }
 	.data : { *(.data) }
 	.bss : { *(.bss) }
 	.rodata : { *(.rodata) }
