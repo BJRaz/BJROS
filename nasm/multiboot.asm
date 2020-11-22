@@ -108,11 +108,36 @@ _scrollup:
 setup_pic:
 	; NOTICE:
 	; at this point the PIC1 and PIC2 is NOT initialized properly. 
-	; The PIC's interrupts needs remapping to other IRQ indexes/addresses.
-	mov	al, 0xfd		; OCW1 interrupt mask = 11111101 
+	; The PIC's interrupts needs remapping to other IRQ indexes/addresses:
+
+	mov	al, 00010001b		; IWC1: bit 1 => ICW4 is needed
+	out	PIC1_CMD, al		; send ICW1 to PIC1 (master)
+	out	PIC2_CMD, al		; send ICW1 to PIC2 (slave)
+
+	mov	al, 00100000b		; ICW2: sets start addr for interrupt vectors 0-7
+					; All vectors from 0-31 have been reserved by Intel, so set to 0x20 (32) 
+	out	PIC1_DATA, al		; write the ICW2 to PIC1
+	
+	mov	al, 00101000b		; ICW2: sets start addr for interrupt vectors 8-15
+					; Set to 0x28 (40) for slave
+	out	PIC2_DATA, al		; write ICW2 to PIC2
+	
+	mov	al, 00000100b		; ICW3: set int line 2 for connecting PIC1 to PIC2
+	out	PIC1_DATA, al		; write ICW3 to PIC1
+
+	mov	al, 00000010b		; ICW3: set input line (from PIC1) to 2 in binary format (010 = 2)
+					; for PIC2
+	out	PIC1_DATA, al		; write ICW3 to pic2
+	
+	mov	al, 1			; ICW4: bit 0 = 1 enables 80x86
+	out	PIC1_DATA, al		; write to both controllers
+	out	PIC2_DATA, al		;
+				
+	mov	al, 11111100b		; OCW1 interrupt mask = 11111101 
 					; only IRQ1 (keyboard) is allowed trough
-					; TODO: remember to activate timer etc later.
+					; TODO: setup masks for PIC2
 	out	PIC1_DATA, al		; write OCW1 to PIC1
+
 	ret
 ; *******
 ; IDT: setup interrupt handlers in IDT
@@ -180,15 +205,45 @@ division_by_zero:
 	hlt				; at this point halts execution, due to the system continues 
 					; calling the failing instruction (type fault)
 	iret
+global timer:function
 timer:
+	pushad
+	
+	xor 	eax, eax
+	xor 	ebx, ebx
+	xor	edx, edx
+	mov 	eax, [ticks]
+	inc 	eax
+	mov	[ticks], eax	
+	mov	ebx, 0x02		; divide by 18 (18 times a second) 
+					; TODO: this leeds to inaccurate timing as PIT ticks at 18.2 times a second
+					; if used to represent time-ticks
+	div	ebx			; qoutient = eax, remainder = edx .. explain
+	cmp	edx, 0
+	jne	.end
+	mov	ebx, eax
+	push	0x33
+	call	_putchar
+	pop	eax
+
+;	push	word [ticks]
+;	push	numbertxt
+;	call	kprintf	
+;	pop	eax
+;	pop	ebx
+.end:
 	mov	al, 0x20		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
+;	pop	eax
+	popad
+	sti				; restore interrupts
 	iret
 global keyboard:function
 keyboard: 				; keyboard handler
 	pushad
 	xor	eax, eax
-	in	al, 0x60		; read scancode from keyboard buffer
+	in	al, 0x60		; read scancode from keyboard buffer (the keyboard encoder)
+					; TODO: remember to read the status bit from the controller
 	;cmp	al, 0x1c
 	;jne	.cont
 	;call	_scrollup
@@ -228,7 +283,7 @@ custom:
 	mov	[cursor.y], ax
 	mov	[cursor.x], bx
 	mov	al, 0x20
-	out	0x20, al		; send EOI
+	out	PIC1_CMD, al		; send EOI
 	pop	ebx	
 	pop	eax	
 	iret
@@ -279,7 +334,7 @@ section .data
 			db	'4', '5', '6', '+'		; (4b, 4d) arrow left, arrow right
 			db	'1', '2', '3', 			; (50) arrow down
 			db	'0', ','
-				
+	ticks		dw	1			
 ;				
 				 	
 ; *******

@@ -9,7 +9,8 @@
 extern uint32_t gdtr;
 extern uint32_t idt;
 extern uint32_t custom;		// references a ISR implemented in nasm/multiboot.asm
-extern uint32_t keyboard;	// references a ISR implemented - 
+extern void keyboard;		// references a ISR implemented - 
+extern void timer;		// references a ISR
 
 void prompt();
 
@@ -112,11 +113,13 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 	// IDT stuff
 	struct interrupt_gate_descriptor *idt_array = (struct interrupt_gate_descriptor*) &idt;
 	set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
-	idt_array+=9;
-	set_isr_entry(idt_array, (uint32_t)&keyboard);
 	idt_array+=32;	
+	set_isr_entry(idt_array, (uint32_t)&timer);
+	idt_array+=1;
+	set_isr_entry(idt_array, (uint32_t)&keyboard);
+	/*idt_array+=32;	
 	set_isr_entry(idt_array, (uint32_t)&isr);
-
+	*/
 	showidtinfo(idt_array);	
 	
 	kprintf("Interrupt gate descriptor baseaddress: 0x%x\n", &idt);
