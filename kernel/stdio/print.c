@@ -42,15 +42,19 @@ void _putchar(char c)
 		{	
 			video = (unsigned char*)0xb8f00;	// (unsigned char*)VIDEO + VIDEO_X * (VIDEO_Y - 1) * 2 ;	
 			_scrollup();
-			//vy--;
+			//vy++;
 		}
 		return;
 	}
 	vx++;
-	
+	if(vx == VIDEO_X*2)
+	{
+		vx = 0;
+		vy++;
+	}		
 	*video++ = c;		// 0x4b;	char
 	*video++ = ATTRIBUTE;	// 0xaf;	attribute
-	if(video > 0xb8fa0-2)
+	if((int)video > 0xb8fa0-2)
 	{
 		_scrollup();
 		video = (unsigned char*)0xb8f00;
