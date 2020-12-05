@@ -39,6 +39,9 @@ extern _putchar
 
 global gdtr:data
 global idt:data				; start of interrupt descriptor table
+global kbdchar:data			; keybaord char data 
+global kbdarray:data
+global kbdarray_upper:data
 
 section .text
 global _start
@@ -133,7 +136,7 @@ setup_pic:
 	out	PIC1_DATA, al		; write to both controllers
 	out	PIC2_DATA, al		;
 				
-	mov	al, 11111100b		; OCW1 interrupt mask = 11111101 
+	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
 					; only IRQ1 (keyboard) is allowed trough
 					; TODO: setup masks for PIC2
 	out	PIC1_DATA, al		; write OCW1 to PIC1
@@ -191,6 +194,37 @@ _kmain:
 	call	cursor
 	; do some out/in on vga mem to init cursor, and move cursor.
 	ret
+; ********
+; IN (b, w, d)
+; ********
+
+global inb:function
+inb:
+	push	ebp		; stack management
+	mov	ebp, esp
+	push	edx		;
+	mov	edx, [ebp+8]	; get argument / the register
+	xor	eax, eax
+	in	al, dx		; get byte from input register
+	pop	edx		; restore edx
+	
+	mov	esp, ebp	; restore stack-frame
+	pop	ebp
+	ret
+
+global outb:function
+outb:
+	push	ebp		; store basepointer
+	mov	ebp, esp
+	push	eax		; store value in eax on stack
+	xor	eax, eax	
+	mov	edx, [ebp+8]	; first argument (the register)
+	mov	eax, [ebp+12]	; second argument (the value)
+	out	dx, al		; write value to output register
+	pop	eax		; restore eax from stack
+	mov	esp, ebp	; restore stack frame
+	pop	ebp
+	ret
 ; *******
 ; ISR: interrupt service routines
 ; Notice: is contained within own section
@@ -239,32 +273,68 @@ timer:
 	sti				; restore interrupts
 	iret
 global keyboard:function
-keyboard: 				; keyboard handler
+keyboard: 				
+	cli
+					; keyboard handler
+					; note: 
+					; I/O port 0x64 (write) is send to the "onboard"-kbdcontroller (i8042)
+					; I/O port 0x60 (write) is send to the "in-case"-kbdcontroller
+					; *---------*                *---------*
+					; *  0x64   *      <-->      *  0x60   *
+					; *---------*                *---------*
+					; (Motherboard)              (keyboard)
+
 	pushad
 	xor	eax, eax
+.waitstatus:
+	in	al, 0x64		; read status byte from i8042
+	and	al, 0x1			; read byte 0 - if = 1, then buffer is full
+	cmp	al, 0x1			;
+	jne	.waitstatus
+
+
 	in	al, 0x60		; read scancode from keyboard buffer (the keyboard encoder)
-					; TODO: remember to read the status bit from the controller
+	
 	;cmp	al, 0x1c
 	;jne	.cont
 	;call	_scrollup
 .cont:
 ;	push   	eax 				
 ;	push 	eax
-	mov	ebx, eax		; store scancode
+	mov	ebx, eax		; store scancode - use stack ?
 	and	al, 0x80		; check for bit 7 is 1 (the key is released - aka 'break')
 	cmp	al, 0
 	jnz	.break
-.make:					; otherwize it is a 'make' - key pressed
+					; otherwize it is a 'make' - key pressed
 	;push	ebx			; arg1 - push the scancode
 	;push	text4			; arg0 - push the format-string
 	;call	kprintf			; print the scancode
-	mov	byte ebx, [kbdarray+ebx]
-	push	ebx	
+	
+	cmp 	ebx, 0x2a		; L-shift
+	jne	.make
+.shift
+	or 	byte [kbdstatus], 0x1		; set status byte to mark shift has been pressed
+	jmp	.end	
+.make:
+	cmp     byte [kbdstatus], 0x1		; shift is pressed
+	je	.makeshift
+	mov	eax, [kbdarray+ebx]
+	jmp	.makedone
+.makeshift:
+	mov	eax, [kbdarray_upper+ebx]
+.makedone:
+	mov	byte [kbdchar], al
+	push	eax	
 	call 	_putchar
 
 	pop	ebx			; reset stack
 	;pop	eax
 .break:
+	cmp	ebx, 0xAA		; L-shift released
+	jne	.end
+.shiftup:
+	and	byte [kbdstatus], 0	; 	
+.end:
 	mov	al, 0x20		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
 	popad
@@ -300,6 +370,8 @@ section .data
 	INT_DESCRIPTOR_FLAGS	equ	5
 	INT_DESCRIPTOR_OFFSETB	equ	6
 	INT_DESCRIPTOR_SIZE	equ	8	
+
+	kbdstatus	db	0	; internal keybaord status field
 	
 	text		db	"Kernel loaded ..",0
 	text2		db	"Halted...", 0
@@ -308,11 +380,12 @@ section .data
 	numbertxt	db	"%d", 0xa, 0
 	hextxt		db	"%x", 0xa, 0
 	kbpressed	db	0
+	kbdchar		db	0	; the last character from keyboard
 	kbdarray	db	0, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '+', 0, 0x08
-			db 	0x9,	; tab
+			db 	0x9,	; (f) tab
 			db 	'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 
-			db	0x61,	; å
-			db	'"',
+			db	0x61,	; (1a) å
+			db	'"',	; (1b) 
 			db	0x0a, 	; CR (1c)
 			db	0,	; CTRL (1d)
 			db	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 
@@ -320,7 +393,7 @@ section .data
 			db	0x6f, 	; ø (28)
 			db	'$', 	; (29 unknown)
 			db	0,	; shift left (2a)
-			db	0,	; (2b)
+			db	"'",	; (2b)
 			db	'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '-',
 			db	0, 	; shift right (36)
 			db	'*', 	
@@ -328,6 +401,32 @@ section .data
 			db	' ', 	; space (39)
 			db	0, 	; caps lock (3a)
 			db	0, 0, 0, 0, 0, 0, 0, 0, 0, 0	; F1-F10 (3b-44)
+			db	0, 	; (45)
+			db	0,	; (46)
+			db	'7', '8', '9', '-'		; (48 also arrow up)
+			db	'4', '5', '6', '+'		; (4b, 4d) arrow left, arrow right
+			db	'1', '2', '3', 			; (50) arrow down
+			db	'0', ','
+	kbdarray_upper	db	0, 0x1b, '!', '"', '#', 0, '%', '&', '/', '(', ')', '=', '?', '`'
+			db 	0x9,	; (f) tab
+			db 	'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 
+			db	0x61,	; (1a) Å
+			db	'^',	; (1b)
+			db	0x0a, 	; (1c) CR 
+			db	0,	; (1d) CTRL 
+			db	'A', 'S', 'D', 'F', 'E', 'H', 'J', 'K', 'L', 
+			db	0x61, 	; (27) Æ
+			db	0x6f, 	; (28) Ø
+			db	'§', 	; (29)
+			db	0,	; (2a) shift left
+			db	'*',	; (2b) 
+			db	'Z', 'X', 'C', 'V', 'B', 'N', 'M', ';', ':', '_',
+			db	0, 	; (36) shift right 
+			db	'*', 	
+			db	0, 	; (38) alt left
+			db	' ', 	; (39) space 
+			db	0, 	; (3a) caps lock 
+			db	0, 0, 0, 0, 0, 0, 0, 0, 0, 0	; (3b-44) F1-F10 
 			db	0, 	; (45)
 			db	0,	; (46)
 			db	'7', '8', '9', '-'		; (48 also arrow up)

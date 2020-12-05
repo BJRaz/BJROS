@@ -1,34 +1,24 @@
 // Brians own kernel main ... 
 #include <stdio.h>
 #include <stdint.h>
-#include <multiboot.h>
-#define i_pushall 	__asm__("pushal");
-#define i_popall	__asm__("popal");
-#define	i_return 	__asm__("leave;iret");
 
 extern uint32_t gdtr;
 extern uint32_t idt;
 extern uint32_t custom;		// references a ISR implemented in nasm/multiboot.asm
 extern void keyboard;		// references a ISR implemented - 
 extern void timer;		// references a ISR
-extern char kbdchar;
-extern char kbdarray[128];
-extern char kbdarray_upper[128];	
-
-extern char inb(char reg);	// I/O in with byte size
-extern void outb(char reg, char byte);	// write byte to register
 
 void prompt();
 
 // need the attribute packed, otherwise the alignment of short limit is 4 bytes
 // yielding a false value. When packed the alignment is 2 bytes  
-struct __attribute__ ((__packed__)) gdtr_register 
+struct gdtr_register 
 {
 	uint16_t limit;
 	uint32_t baseaddress;
 };
 
-struct __attribute__ ((__packed__)) interrupt_gate_descriptor
+struct interrupt_gate_descriptor
 {
 	uint16_t offset_lo;
 	uint16_t segment_selector;
@@ -44,35 +34,23 @@ void isr_div_by_zero()
 {
 	//i_pushall;
 	kprintf("DIV BY ZERO Exception - system halted...");
-	__asm__("hlt");
 	//i_popall;
-	i_return;
+	return;
 }
 
 // test ISR
 // interrupt 20H
-void isr()
+void isr(uint32_t* arg1, uint32_t *arg2)
 {
 	// TODO: store all relevant regs in stack
 	// check stack segment etc.
 	//i_pushall;
-	//__asm__("mov $2, %eax");
-	//__asm__("mov %eax, %gs");	
-	__asm__("pushl %eax");
+	kprintf("ISR args  %x, %x\n", *arg1, *arg2); 
 	kprintf("ISR args %d, %d\n", 22, 24);
 	kprintf("her: %d, %d, %x\n", 1, 2, 16);
-	char scancode = inb(0x60);	
-	kprintf("scan: %x\n", scancode);
-
-	if(scancode == 0x2a)
-		kprintf("Shift is pressed");
-
 	// remember to send EOI to PIC if used as a hardware-interrupt routine.
 	//i_popall ; TODO: somehow this doesn't work when run in emulator (sets ebp = 0x2)
-	__asm__("popl %eax");
-	outb(0x20, 0x20);				// send EOI to PIC
-	//__asm__("hlt");
-	i_return;
+	return;
 }
 
 void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t isr_address) 
@@ -94,7 +72,7 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 	kprintf("IDT offset_hi: 0x%x\n", idt_array->offset_hi);
 }
 
-int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
+int kmain(const void* multiboot_structure, const void* magicvalue) {
 	char* tal = "842";
 	
 	int result = _atoi(tal);
@@ -102,9 +80,9 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 
 	_itoa(result, buffer);
 	kprintf("**************\n");
-	kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
+	/*kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
 		multiboot_structure->mem_lower, 
-		multiboot_structure->mem_upper);
+		multiboot_structure->mem_upper);*/
 	kprintf("multiboot magic header %x\n", magicvalue);
 
 	int len = 0;
@@ -125,13 +103,11 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 	// IDT stuff
 	struct interrupt_gate_descriptor *idt_array = (struct interrupt_gate_descriptor*) &idt;
 	set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
-	idt_array += 32;	
+	/*idt_array+=8;
 	set_isr_entry(idt_array, (uint32_t)&timer);
-	idt_array += 1;
+	idt_array+=1;
 	set_isr_entry(idt_array, (uint32_t)&keyboard);
-	idt_array+=32;
-	/*	
-	idt_array += 1;
+	idt_array+=32;	
 	set_isr_entry(idt_array, (uint32_t)&isr);
 	*/
 	showidtinfo(idt_array);	
@@ -165,18 +141,6 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 
 void prompt() {
 	kprintf("> ");
-	char buf[255];
-	while(1) 
-	{ 
-		int c = _getchar();
-		if(c != 0)
-			kprintf("%x", c); // TODO: fails (%c)
-	}
 }
 
-int _getchar(void) {
-	while(kbdchar==0); // TODO: busy wait - refactor! 	
-	int result = kbdchar;
-	kbdchar = 0;
-	return result;
-}
+

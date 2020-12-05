@@ -104,6 +104,6 @@ bochs: install
 qemu: install
 	qemu -fda floppy.img 
 TAGS:
-	ctags -R .
+	ctags --exclude=k.c -R .
 tests:	$(OBJS) itoa.c 
 	$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 

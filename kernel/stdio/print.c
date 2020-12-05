@@ -83,7 +83,7 @@ int kprintln(const char* text) {
 int kprintf(const char* format, ...)
 {
 	int count = 0;
-	void* args = (int*)(&format + 4);	// TODO: in clang +4, in gcc this has to be add with +1
+	void* args = (int*)(&format + 4);	// TODO: in clang +4, in gcc this has to be added with +1
 
 	while(*format != '\0')			// TODO: optimize this 
 	{
@@ -130,7 +130,13 @@ int kprintf(const char* format, ...)
 						format++;
 					}
 					break;
-				
+					case 'c':
+					{
+						kprint(*(unsigned int*)args);
+						args = 4 + (char*)args;
+						format++;
+					}
+					break;		
 				}
 			break;
 			
