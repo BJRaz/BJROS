@@ -11,7 +11,9 @@ int _utoa(unsigned int, char*);
 int _utox(unsigned int, char*);
 int _strlen(const char*);
 void _putchar(const char);
-int _getchar(void);
+char _getchar(void);
+//void _scrollup(void);
+void* _memset(void* buffer, unsigned char c, int size);
 
 int kprint(const char*);
 int kprintln(const char*);

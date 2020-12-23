@@ -230,6 +230,9 @@ outb:
 ; Notice: is contained within own section
 ; *******
 section .isr
+; ***************************
+; division by zero handler
+; ***************************
 division_by_zero:
 	;mov	esi,    text
 	;call	print
@@ -239,6 +242,9 @@ division_by_zero:
 	hlt				; at this point halts execution, due to the system continues 
 					; calling the failing instruction (type fault)
 	iret
+; ***************************
+; timer - handles the clockinterrupts
+; ***************************
 global timer:function
 timer:
 	pushad
@@ -272,19 +278,20 @@ timer:
 	popad
 	sti				; restore interrupts
 	iret
+; ****************************
+; keyboard handler
+; note: 
+; I/O port 0x64 (write) is send to the "onboard"-kbdcontroller (i8042)
+; I/O port 0x60 (write) is send to the "in-case"-kbdcontroller
+; *---------*                *---------*
+; *  0x64   *      <-->      *  0x60   *
+; *---------*                *---------*
+; (Motherboard)              (keyboard)
+; ****************************
 global keyboard:function
 keyboard: 				
 	cli
-					; keyboard handler
-					; note: 
-					; I/O port 0x64 (write) is send to the "onboard"-kbdcontroller (i8042)
-					; I/O port 0x60 (write) is send to the "in-case"-kbdcontroller
-					; *---------*                *---------*
-					; *  0x64   *      <-->      *  0x60   *
-					; *---------*                *---------*
-					; (Motherboard)              (keyboard)
-
-	pushad
+						pushad
 	xor	eax, eax
 .waitstatus:
 	in	al, 0x64		; read status byte from i8042
@@ -311,7 +318,10 @@ keyboard:
 	;call	kprintf			; print the scancode
 	
 	cmp 	ebx, 0x2a		; L-shift
-	jne	.make
+	je	.shift
+	cmp	ebx, 0x36		; R-shift
+	je	.shift
+	jmp	.make
 .shift
 	or 	byte [kbdstatus], 0x1		; set status byte to mark shift has been pressed
 	jmp	.end	
@@ -324,14 +334,17 @@ keyboard:
 	mov	eax, [kbdarray_upper+ebx]
 .makedone:
 	mov	byte [kbdchar], al
-	push	eax	
-	call 	_putchar
+;	push	eax	
+;	call 	_putchar
 
-	pop	ebx			; reset stack
+;	pop	ebx			; reset stack
 	;pop	eax
 .break:
 	cmp	ebx, 0xAA		; L-shift released
-	jne	.end
+	je	.shiftup
+	cmp	ebx, 0xB6		; R-shift released
+	je	.shiftup
+	jmp	.end
 .shiftup:
 	and	byte [kbdstatus], 0	; 	
 .end:
@@ -340,7 +353,10 @@ keyboard:
 	popad
 	sti		
 	iret
-global custom:function			; custom (test) isr - declared global, and can be used in other modules
+; *********************
+; custom (test) isr - declared global, and can be used in other modules
+; *********************
+global custom:function			
 custom: 
 	push	eax
 	push	ebx
@@ -407,18 +423,18 @@ section .data
 			db	'4', '5', '6', '+'		; (4b, 4d) arrow left, arrow right
 			db	'1', '2', '3', 			; (50) arrow down
 			db	'0', ','
-	kbdarray_upper	db	0, 0x1b, '!', '"', '#', 0, '%', '&', '/', '(', ')', '=', '?', '`'
+	kbdarray_upper	db	0, 0x1b, '!', '"', '#', 0, '%', '&', '/', '(', ')', '=', '?', '`', 0x08
 			db 	0x9,	; (f) tab
 			db 	'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 
 			db	0x61,	; (1a) Å
 			db	'^',	; (1b)
 			db	0x0a, 	; (1c) CR 
 			db	0,	; (1d) CTRL 
-			db	'A', 'S', 'D', 'F', 'E', 'H', 'J', 'K', 'L', 
+			db	'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 
 			db	0x61, 	; (27) Æ
 			db	0x6f, 	; (28) Ø
 			db	'§', 	; (29)
-			db	0,	; (2a) shift left
+			;db	0,	; (2a) shift left
 			db	'*',	; (2b) 
 			db	'Z', 'X', 'C', 'V', 'B', 'N', 'M', ';', ':', '_',
 			db	0, 	; (36) shift right 

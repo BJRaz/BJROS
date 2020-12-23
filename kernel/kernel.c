@@ -157,26 +157,42 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 		kprintf("Number: %s\n", buffer);
 	}
 	//int calculation = 10 / 0;
-
+	
 	prompt();
 
 	return len;	
 }
 
+
 void prompt() {
-	kprintf("> ");
 	char buf[255];
-	while(1) 
-	{ 
-		int c = _getchar();
-		if(c != 0)
-			kprintf("%x", c); // TODO: fails (%c)
+	while(1) {
+		_memset(buf, 0, 255);
+		kprintf("> ");
+		char idx = 0;
+		char c = 0;
+		do
+		{ 
+next:
+			if(idx == 255)
+				break;
+			c = _getchar();
+			buf[idx++] = c;
+			if(c != 0) {
+				switch(c) {
+					case 0x08:
+						_putchar(c);	
+						goto next;		
+				}
+				_putchar(c);
+			} 
+		} while(c != '\n'); 
+		kprintf("Buffer: %s", buf);
 	}
 }
-
-int _getchar(void) {
+char _getchar(void) {
 	while(kbdchar==0); // TODO: busy wait - refactor! 	
-	int result = kbdchar;
+	char result = kbdchar;
 	kbdchar = 0;
 	return result;
 }

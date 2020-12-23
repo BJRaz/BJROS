@@ -46,6 +46,11 @@ void _putchar(char c)
 		}
 		return;
 	}
+	if(c == 0x08) {	// backspace
+		*video-- = 0;
+		*video-- = 0;
+		return;
+	}
 	vx++;
 	if(vx == VIDEO_X*2)
 	{
@@ -60,6 +65,17 @@ void _putchar(char c)
 		video = (unsigned char*)0xb8f00;
 	}
 } 
+
+void* _memset(void* buffer, unsigned char c, int size) {
+	int idx = 0;
+	while(idx < size) 
+	{
+		*(unsigned char*)buffer = c;
+		idx++;
+		buffer++;
+	}
+	return buffer -= size;
+}
 
 int kprint(const char* text) {
 	//__asm__(".intel_syntax noprefix");
@@ -85,7 +101,8 @@ int kprintf(const char* format, ...)
 	int count = 0;
 	void* args = (int*)(&format + 4);	// TODO: in clang +4, in gcc this has to be added with +1
 
-	while(*format != '\0')			// TODO: optimize this 
+	//while(*format != '\0')			// TODO: optimize this 
+	while(1)
 	{
 		
 		switch(*format) 
@@ -132,19 +149,21 @@ int kprintf(const char* format, ...)
 					break;
 					case 'c':
 					{
-						kprint(*(unsigned int*)args);
+						char c = *(char*)args;
+						_putchar(c);
 						args = 4 + (char*)args;
 						format++;
 					}
 					break;		
 				}
 			break;
-			
 		}
-		
-		_putchar(*format);
-		format++;
-		count++;
+		if(*format != '\0'){		
+			_putchar(*format);	
+			format++;
+			count++;
+		} else
+			break;
 	}
 	return count;
 }

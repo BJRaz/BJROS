@@ -39,22 +39,6 @@ $(OBJDIR)/%.o: %.c
 
 $(OBJDIR):
 	-mkdir $(OBJDIR) 
-#$(OBJDIR)/multiboot.so: mymultiboot.asm
-#	$(AS) $(ASFLAGS) $^ -o $@  
-#atoi.o: atoi.asm
-#	$(AS) $(ASFLAGS) $^ -o $@  
-#atou.o: atou.asm
-#	$(AS) $(ASFLAGS) $^ -o $@  
-#strlen.o: strlen.asm
-#	$(AS) $(ASFLAGS) $^ -o $@  
-#itoa.o: itoa.asm
-#	$(AS) $(ASFLAGS) $^ -o $@  
-#utoa.o: utoa.asm
-#	$(AS) $(ASFLAGS) $^ -o $@
-#utox.o: utox.asm
-#	$(AS) $(ASFLAGS) $^ -o $@
-#cursor.o: cursor.asm
-#	$(AS) $(ASFLAGS) $^ -o $@
 kernel.bin: $(OBJS)  
 	$(LD) $(LDFLAGS) $^ -o kernel.bin
 	-mbchk $@
@@ -67,14 +51,17 @@ clean:
 	-rm -f $(IMGHD) 
 	-rm -rf $(OBJDIR)
 $(IMGHD):	 
-	dd if=/dev/zero of=$(IMGHD) bs=1024 count=10000			# makes a hdd image of size 10MB
-	parted $(IMGHD) mklabel msdos mkpart primary 1 10 set 1 boot on # check for 1 10 in start, end for mkpart !
+	dd if=/dev/zero of=$(IMGHD) bs=1024 count=30000			# makes a hdd image of size 30MB
+	parted $(IMGHD) mklabel msdos mkpart primary 1 30 set 1 boot on # check for 1 10 in start, end for mkpart !
 grubhd:	$(IMGHD) kernel.bin $(GRUBFILEHD) 
 	kpartx -a $(IMGHD)						# assign partition(s) to loopback-device (dev/mapper/loop0p1)
 	mkfs.ext2 -v $(LODEVHD)						# make filesystem on partition
 	mount $(LODEVHD) $(MOUNTPOINT)					# mount partition 
 	mkdir -p $(MOUNTPOINT)/boot/grub				# make grub dirs and copy files
 	cp /usr/share/grub/i386-redhat/stage[12] $(MOUNTPOINT)/boot/grub
+	#cp vmlinuz $(MOUNTPOINT)/
+	#cp config $(MOUNTPOINT)/
+	#cp initramfs $(MOUNTPOINT)/
 	cp kernel.bin $(MOUNTPOINT)/
 	cp grub.conf $(MOUNTPOINT)/boot/grub
 	grub --device-map=/dev/null --batch < $(GRUBFILEHD) 		# setup grub for HDD
@@ -106,4 +93,5 @@ qemu: install
 TAGS:
 	ctags --exclude=k.c -R .
 tests:	$(OBJS) itoa.c 
-	$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 
+	#$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 
+	$(CC) -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so 
