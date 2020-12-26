@@ -74,7 +74,7 @@ grubhd:	$(IMGHD) kernel.bin $(GRUBFILEHD)
 	mkfs.ext2 -v $(LODEVHD)						# make filesystem on partition
 	mount $(LODEVHD) $(MOUNTPOINT)					# mount partition 
 	mkdir -p $(MOUNTPOINT)/boot/grub				# make grub dirs and copy files
-	cp /usr/share/grub/i386-redhat/stage[12] $(MOUNTPOINT)/boot/grub
+	cp ./grub-0.97-i386-pc/boot/grub/stage[12] $(MOUNTPOINT)/boot/grub
 	cp kernel.bin $(MOUNTPOINT)/
 	cp grub.conf $(MOUNTPOINT)/boot/grub
 	grub --device-map=/dev/null --batch < $(GRUBFILEHD) 		# setup grub for HDD
