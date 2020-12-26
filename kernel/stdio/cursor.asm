@@ -39,6 +39,7 @@ disable_cursor:
 	out	dx, al			; write data
 	
 	ret
+global  print:function
 print:
 	mov	ecx, VGA_VIDEO
 .loop:
@@ -56,5 +57,5 @@ section .data
 VGA_VIDEO		equ	0xb8000
 VGA.W			equ	80
 VIDEOTEXT		equ	0xff65ff65
-VIDEOATT		equ	0x07
+VIDEOATT		equ	0x06
 

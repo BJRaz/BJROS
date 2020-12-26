@@ -9,12 +9,32 @@ void printverylong();
 int _kprintf(const char* format, ...);
 void testuinttohex(uint32_t number);
 
+void* _memset(void* buffer, unsigned char c, int size) {
+	int idx = 0;
+	void *start = buffer;
+	while(idx < size) {
+		*(unsigned char*)buffer = c;
+		idx++;
+		buffer++;
+	}
+	return buffer -= size;
+}
+
+
 int main(int argc, char** argv) 
 {
 	char* arg1 = 0;
 
 	if(argc > 1)
 		arg1 = (char*)argv[1];
+	
+	char buf[20];
+
+ 	void* p = _memset(buf, 0, 20);
+
+	char str = 'M'; //"Brian";
+	printf("%d\n", strlen(str));
+
 	// test _atoi
 	int number = _atoi(arg1);
 
@@ -35,6 +55,10 @@ int main(int argc, char** argv)
 	// test _utox (uint to hex)
 	_utox(number, buffer);
 	printf("utox: %s\n", buffer);
+	
+	// test _utox (uint to hex)
+	char c = 'B';
+	_kprintf("c char: %c\n", c);
 	
 	// misc tests
 	printverylong();
@@ -105,6 +129,13 @@ int _kprintf(const char* format, ...)
 					case 's':	// string
 					{
 						printf(*(char**)args);	
+						args = 4 + (char*)args;
+						format++;
+					}
+					break;
+					case 'c':	// string
+					{
+						printf(*args);	
 						args = 4 + (char*)args;
 						format++;
 					}
