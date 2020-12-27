@@ -481,6 +481,12 @@ section .gdt
 		dw 	00000000b
 		dw	00000000b
 		dw	00000000b
+		
+		db	11111100b	; first segment descriptor (not used)
+		db	00000000b
+		dw 	00000000b
+		dw	00000000b
+		dw	00000000b
 
 		dd 	0x0000ffff	; base address (16-31), segment limit (0-15)
 		db	00000000b
