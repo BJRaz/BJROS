@@ -156,6 +156,7 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 		_itoa(i, buffer);
 		kprintf("Number: %s\n", buffer);
 	}
+
 	//int calculation = 10 / 0;
 	
 	prompt();
