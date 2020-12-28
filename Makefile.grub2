@@ -6,8 +6,8 @@ include Makefile
 MOUNTPOINT=/mnt/test
 OUTPUTHD=/media/sf_VBoxLinuxShare/binaries/hdd.img
 IMGHD=hdd.img
-LODEVHD=/dev/mapper/loop1p1
-LODEV=/dev/loop1
+LODEVHD=/dev/mapper/loop0p1
+LODEV=/dev/loop0
 
 $(IMGHD):	 
 	dd if=/dev/zero of=$(IMGHD) bs=1024 count=30000			# makes a hdd image of size 30MB
@@ -18,7 +18,9 @@ grubhd:	$(IMGHD) $(GRUBFILEHD) kernel.bin
 	mount $(LODEVHD) $(MOUNTPOINT)					# mount partition 
 	mkdir -p $(MOUNTPOINT)/boot					# make grub dirs and copy files
 	cp kernel.bin $(MOUNTPOINT)/
+	-cp kernel.bin.old $(MOUNTPOINT)/
 	grub2-install --target=i386-pc --modules="multiboot normal part_msdos ext2" --boot-directory=$(MOUNTPOINT)/boot $(LODEV) 
+	cp grub.cfg $(MOUNTPOINT)/boot/grub2/
 	umount $(MOUNTPOINT)						# umount partition 
 	kpartx -d $(IMGHD)						# release loopback-device
 	sync

@@ -38,6 +38,7 @@ extern kprintf
 extern _putchar
 
 global gdtr:data
+global gdt:data
 global idt:data				; start of interrupt descriptor table
 global kbdchar:data			; keybaord char data 
 global kbdarray:data
@@ -148,7 +149,7 @@ setup_pic:
 setup_interrupts:	
 	lea	eax, [division_by_zero]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], ax
-	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0x8
+	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0x10
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0
 	mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 10001110b
 	rol	eax, 16
@@ -156,7 +157,7 @@ setup_interrupts:
 	
 	lea	eax, [timer]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*TIMER)], ax
-	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*TIMER)], 0x8
+	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*TIMER)], 0x10
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*TIMER)], 0
 	mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*TIMER)], 10001110b
 	rol	eax, 16
@@ -172,7 +173,7 @@ setup_interrupts:
 	
 	lea	eax, [custom]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*CUSTOM)], ax
-	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0x8
+	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0x10
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0
 	mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*CUSTOM)], 10001110b
 	rol	eax, 16
@@ -476,6 +477,7 @@ section .bss
 ;  - dont forget to align to 8 bytes boundary (Why ?)
 ; *******
 section .gdt
+gdt:
 		db	11111100b	; first segment descriptor (not used)
 		db	00000000b
 		dw 	00000000b
@@ -517,7 +519,7 @@ idt:
 		times 256	db 0	; fill with 0 untill entry index 32
 		; entry index 32(0x20):	
 		dw	0x01dc		; offset B
-		dw	0x0008		; segment 
+		dw	0x0010		; segment 
 		db	0x0		; fill bytes 
 		db	10001110b	; byte 8-12 0D110, byte 13-14 (DPL), 15 P (present flag)
 		dw	0x0011		; offset A			

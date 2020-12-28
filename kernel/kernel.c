@@ -78,7 +78,7 @@ void isr()
 void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t isr_address) 
 {
 	idt_entry->offset_lo = (uint16_t)isr_address & 0xFFFF;
-	idt_entry->segment_selector = 0x8;
+	idt_entry->segment_selector = 0x10;
 	idt_entry->fill = 0;
 	idt_entry->flags = 0x8E;	// aka 10001110b
 	idt_entry->offset_hi = (uint16_t)(isr_address >> 16) & 0xFFFF; 
