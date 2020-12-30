@@ -23,6 +23,9 @@ void* _memset(void* buffer, unsigned char c, int size) {
 
 int main(int argc, char** argv) 
 {
+	char* text1 = "Brian tester: 0x%x";
+	_kprintf(text1, 16);
+	return 0;
 	char* arg1 = 0;
 
 	if(argc > 1)
@@ -88,7 +91,7 @@ void printverylong()
 int _kprintf(const char* format, ...)
 {
 	int count = 0;
-	int *args = (int*)&format + 4;
+	int *args = (int*)(&format + 1);
 
 	while(*format != '\0')
 	{
