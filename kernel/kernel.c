@@ -174,7 +174,7 @@ void prompt() {
 	while(1) {
 		_memset(buf, 0, 255);
 		kprintf("> ");
-		char idx = 0;
+		unsigned char idx = 0;
 		char c = 0;
 		do
 		{ 
