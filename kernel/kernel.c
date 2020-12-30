@@ -5,6 +5,12 @@
 #define i_pushall 	__asm__("pushal");
 #define i_popall	__asm__("popal");
 #define	i_return 	__asm__("leave;iret");
+#define halt		__asm__("hlt");
+
+#define IDT_SEGMENT	0x8
+#define IDT_FILL	0x0
+#define IDT_FLAGS	0x8e	// TODO: check this - aka 10001110b
+
 
 extern uint32_t gdtr;
 extern uint32_t idt;
@@ -78,9 +84,9 @@ void isr()
 void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t isr_address) 
 {
 	idt_entry->offset_lo = (uint16_t)isr_address & 0xFFFF;
-	idt_entry->segment_selector = 0x10;
-	idt_entry->fill = 0;
-	idt_entry->flags = 0x8E;	// aka 10001110b
+	idt_entry->segment_selector = IDT_SEGMENT;
+	idt_entry->fill = IDT_FILL;
+	idt_entry->flags = IDT_FLAGS;
 	idt_entry->offset_hi = (uint16_t)(isr_address >> 16) & 0xFFFF; 
 }
 
@@ -95,6 +101,7 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 }
 
 int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
+//halt;
 	char* tal = "842";
 	
 	int result = _atoi(tal);
@@ -130,13 +137,10 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 	idt_array += 1;
 	set_isr_entry(idt_array, (uint32_t)&keyboard);
 	idt_array+=32;
-	/*	
-	idt_array += 1;
-	set_isr_entry(idt_array, (uint32_t)&isr);
-	*/
+	
 	showidtinfo(idt_array);	
 	
-	kprintf("Interrupt gate descriptor baseaddress: 0x%x\n", &idt);
+	kprintf("Interrupt gate descriptor baseaddress: 0x%x, %d\n", &idt, &idt);
 	
 	kprintf("ISR address: 0x%x\n", &isr);
 	kprintf("ISR address div by zero: 0x%x\n", &isr_div_by_zero);
@@ -191,6 +195,7 @@ next:
 		kprintf("Buffer: %s", buf);
 	}
 }
+
 char _getchar(void) {
 	while(kbdchar==0); // TODO: busy wait - refactor! 	
 	char result = kbdchar;
