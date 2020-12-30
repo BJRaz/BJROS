@@ -99,7 +99,8 @@ int kprintln(const char* text) {
 int kprintf(const char* format, ...)
 {
 	int count = 0;
-	void* args = (int*)(&format + 4);	// TODO: in clang +4, in gcc this has to be added with +1
+	void* args = (int*)(&format + 1);	// TODO: before: in clang +4, in gcc this has to be added with +1
+						// now: is has to be +1 for clang as well (check)
 
 	//while(*format != '\0')			// TODO: optimize this 
 	while(1)
