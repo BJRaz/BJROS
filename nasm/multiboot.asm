@@ -47,6 +47,7 @@ global kbdarray_upper:data
 section .text
 global _start
 _start:
+
 	jmp	multiboot_entry
 	align 4				; 32 bit aligned	
 multiboot_header:
@@ -59,8 +60,22 @@ multiboot_header:
 	dd	0			; bss end addr.
 	dd	multiboot_entry		; entry addr.
 multiboot_entry:
-
+	
 	cli
+
+	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
+	lidt	[idtr]			; load interrupt descriptor table register with 6 byte memory value
+	
+	jmp	0x8:setup
+setup:
+	mov	cx, 0x10
+	mov	ds, cx
+	mov	es, cx
+	mov	fs, cx
+	mov	gs, cx
+	mov	ss, cx
+
+
 	
 	mov	esp, 0x7c00
 	mov	ebp, esp 	
@@ -71,22 +86,20 @@ multiboot_entry:
 	call 	setup_pic		; init of PIC (programmable interrupt controller)
 	;call 	setup_interrupts	; setup interrupt service routines etc..
 	
-	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
-	lidt	[idtr]			; load interrupt descriptor table register with 6 byte memory value
 
 	mov	word [cursor.y], 8	; initialization of variables
 	mov	word [cursor.x], 0	; consider make them global
 
 	sti				; enable interrupts
-
- 	call 	kmain			;_kmain			; call kernel main function
+ 	
+	call 	kmain			;_kmain			; call kernel main function
 
 	mov	eax, cs			; (test) stores visible content of Code Section to eax 
 					; at this point the value should be 0d (00000000 00001000) - 1 = index 8
 					; and 0 = GDT, 00 = priviledge level
 mainloop:
 	; TODO: busyloopw - uses 100% cpu .. fix somehow
-	jmp	mainloop
+;	jmp	mainloop
 ;	int	0x20
 	hlt
 ; *******
@@ -149,7 +162,7 @@ setup_pic:
 setup_interrupts:	
 	lea	eax, [division_by_zero]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], ax
-	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0x10
+	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0x8
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0
 	mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 10001110b
 	rol	eax, 16
@@ -157,7 +170,7 @@ setup_interrupts:
 	
 	lea	eax, [timer]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*TIMER)], ax
-	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*TIMER)], 0x10
+	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*TIMER)], 0x8
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*TIMER)], 0
 	mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*TIMER)], 10001110b
 	rol	eax, 16
@@ -173,7 +186,7 @@ setup_interrupts:
 	
 	lea	eax, [custom]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*CUSTOM)], ax
-	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0x10
+	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0x8
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0
 	mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*CUSTOM)], 10001110b
 	rol	eax, 16
@@ -379,7 +392,7 @@ custom:
 ; *******
 section .data
 	MB_HEADER_MAGIC		equ	0x1badb002
-	MB_HEADER_FLAGS		equ	0x00010003
+	MB_HEADER_FLAGS		equ	0x00000003
 	MB_HEADER_CHECKSUM	equ	-(MB_HEADER_MAGIC+MB_HEADER_FLAGS)
 	INT_DESCRIPTOR_OFFSETA	equ	0
 	INT_DESCRIPTOR_SEGMENT	equ	2
@@ -484,12 +497,6 @@ gdt:
 		dw	00000000b
 		dw	00000000b
 		
-		db	11111100b	; first segment descriptor (not used)
-		db	00000000b
-		dw 	00000000b
-		dw	00000000b
-		dw	00000000b
-
 		dd 	0x0000ffff	; base address (16-31), segment limit (0-15)
 		db	00000000b
 		db 	10011011b	; type(1011 = Code,execute/read), S=1, DPL=001, P=1
@@ -519,7 +526,7 @@ idt:
 		times 256	db 0	; fill with 0 untill entry index 32
 		; entry index 32(0x20):	
 		dw	0x01dc		; offset B
-		dw	0x0010		; segment 
+		dw	0x0008		; segment 
 		db	0x0		; fill bytes 
 		db	10001110b	; byte 8-12 0D110, byte 13-14 (DPL), 15 P (present flag)
 		dw	0x0011		; offset A			
