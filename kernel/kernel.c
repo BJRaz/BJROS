@@ -1,5 +1,6 @@
 // Brians own kernel main ... 
 #include <stdio.h>
+#include <string.h>
 #include <stdint.h>
 #include <multiboot.h>
 #define i_pushall 	__asm__("pushal");
@@ -24,7 +25,14 @@ extern char kbdarray_upper[128];
 extern char inb(char reg);	// I/O in with byte size
 extern void outb(char reg, char byte);	// write byte to register
 
-void prompt();
+void prompt(void (*)(char*));
+void callback(char*);
+void test();
+
+struct interrupt_gate_descriptor *idt_array;
+struct multiboot_info* mb_info;
+void* mv;
+
 
 // need the attribute packed, otherwise the alignment of short limit is 4 bytes
 // yielding a false value. When packed the alignment is 2 bytes  
@@ -100,8 +108,8 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 	kprintf("IDT offset_hi: 0x%x\n", idt_array->offset_hi);
 }
 
-int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
-//halt;
+int sysinfo() 
+{
 	char* tal = "842";
 	
 	int result = _atoi(tal);
@@ -110,9 +118,9 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 	_itoa(result, buffer);
 	kprintf("**************\n");
 	kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
-		multiboot_structure->mem_lower, 
-		multiboot_structure->mem_upper);
-	kprintf("multiboot magic header %x\n", magicvalue);
+		mb_info->mem_lower, 
+		mb_info->mem_upper);
+	kprintf("multiboot magic header %x\n", mv);
 
 	int len = 0;
 
@@ -128,16 +136,7 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 	kprintf("Unsigned converstion atou('4000000000')': %u\n", 4000000000);
 
 	kprintln(buffer);*/
-	
-	// IDT stuff
-	struct interrupt_gate_descriptor *idt_array = (struct interrupt_gate_descriptor*) &idt;
-	set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
-	idt_array += 32;	
-	set_isr_entry(idt_array, (uint32_t)&timer);
-	idt_array += 1;
-	set_isr_entry(idt_array, (uint32_t)&keyboard);
-	idt_array+=32;
-	
+
 	showidtinfo(idt_array);	
 	
 	kprintf("Interrupt gate descriptor baseaddress: 0x%x, %d\n", &idt, &idt);
@@ -155,26 +154,53 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 			
 	kprintf("GDTR baseaddress value: 0x%x\n", gdtreg->baseaddress);
 	// gdt stuff end
-	//
-	for(int i=0;i<3;i++){
-		_itoa(i, buffer);
-		kprintf("Number: %s\n", buffer);
-	}
 
-	//int calculation = 10 / 0;
+	return len;
+
+}
+int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
+	mb_info = multiboot_structure;
+	mv = magicvalue;
+
+	// IDT stuff
+	idt_array = (struct interrupt_gate_descriptor*) &idt;
+	set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
+	idt_array += 32;	
+	set_isr_entry(idt_array, (uint32_t)&timer);
+	idt_array += 1;
+	set_isr_entry(idt_array, (uint32_t)&keyboard);
+	idt_array+=32;
 	
-	prompt();
+	prompt(callback);
 
-	return len;	
+	return 0;	
 }
 
+void test() 
+{
+	//
+	/*for(int i=0;i<32;i++){
+		_itoa(i, buffer);
+		kprintf("Number: %s\n", buffer);
+	}*/
 
-void prompt() {
+	//int calculation = 10 / 0;
+}
+
+void callback(char* buf) 
+{
+	if(_strcmp("sysinfo", buf) == 0)
+		sysinfo();
+	else
+		kprintf("Buffer: %s\n", buf);
+}
+
+void prompt(void (*readbuf)(char*)) {
 	char buf[255];
 	while(1) {
 		_memset(buf, 0, 255);
 		kprintf("> ");
-		unsigned char idx = 0;
+		uint8_t idx = 0;
 		char c = 0;
 		do
 		{ 
@@ -182,17 +208,24 @@ next:
 			if(idx == 255)
 				break;
 			c = _getchar();
-			buf[idx++] = c;
 			if(c != 0) {
 				switch(c) {
-					case 0x08:
+					case 0x08:	//backspace char
 						_putchar(c);	
-						goto next;		
+						//goto next;		
+						break;
+					case 0x0a:	// linefeed
+						_putchar(c);
+						break;
+					default:
+						_putchar(c);
+						//idx++;
+						buf[idx++] = c;
 				}
-				_putchar(c);
 			} 
 		} while(c != '\n'); 
-		kprintf("Buffer: %s", buf);
+		(*readbuf)(buf);
+		//kprintf("Buffer: %s", buf);
 	}
 }
 

@@ -1,8 +1,9 @@
 //
-// implementation of _clean, and _putchar
+// implementation of _clean, and _putchar etc.
 // Brian Juul Rasmussen jan 2020
 // 
 // aug 2020: added kprintf, kprint and kprintln
+// dec 2020: added _memset
 //
 // todo:
 // error handling
@@ -11,6 +12,7 @@
 //
 
 #include <stdio.h>
+#include <string.h>
 
 #define VIDEO	0xB8000			// VGA color text buffer (mode 3)
 #define VIDEO_X	80

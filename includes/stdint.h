@@ -1,4 +1,6 @@
 // posix signed and unsigned integer types
+#ifndef STDINT_H
+#define STDINT_H
 
 typedef char int8_t;
 typedef unsigned char uint8_t;
@@ -12,3 +14,4 @@ typedef unsigned int uint32_t;
 typedef long long int64_t;
 typedef unsigned long long uint64_t;
 
+#endif

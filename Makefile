@@ -7,7 +7,7 @@ AS=nasm
 ASFLAGS=-felf32 -Fdwarf  
 LODEV=/dev/loop0
 OBJDIR:=bin
-OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o kernel.o) 
+OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o string.so kernel.o) 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
 
 # settings floppy
@@ -94,4 +94,4 @@ TAGS:
 	ctags --exclude=k.c -R .
 tests:	$(OBJS) itoa.c 
 	#$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 
-	$(CC) -m32 -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so 
+	$(CC) -m32 -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so bin/string.so 

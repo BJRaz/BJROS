@@ -9,7 +9,6 @@ int _atou(const char*);
 int _itoa(int, char*);
 int _utoa(unsigned int, char*);
 int _utox(unsigned int, char*);
-int _strlen(const char*);
 void _putchar(const char);
 char _getchar(void);
 //void _scrollup(void);
