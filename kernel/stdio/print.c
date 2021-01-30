@@ -1,5 +1,5 @@
 //
-// implementation of _clean, and _putchar etc.
+// implementation of _clear, and _putchar etc.
 // Brian Juul Rasmussen jan 2020
 // 
 // aug 2020: added kprintf, kprint and kprintln
@@ -25,7 +25,7 @@ unsigned char* video = (unsigned char*)VIDEO;
 
 extern void _scrollup();
 
-void _clean() 
+void _clear() 
 {
 	video = (unsigned char*)VIDEO;
 	for(int i=0;i<VIDEO_X * VIDEO_Y * 2;i++)

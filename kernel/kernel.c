@@ -1,4 +1,6 @@
 // Brians own kernel main ... 
+//
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -22,8 +24,8 @@ extern char kbdchar;
 extern char kbdarray[128];
 extern char kbdarray_upper[128];	
 
-extern char inb(char reg);	// I/O in with byte size
-extern void outb(char reg, char byte);	// write byte to register
+extern char inb(uint8_t reg);		// get byte from memory register reg
+extern void outb(uint8_t reg, uint8_t byte);	// write byte to memory register reg
 
 void prompt(void (*)(char*));
 void callback(char*);
@@ -158,7 +160,7 @@ int sysinfo()
 	return len;
 
 }
-int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
+int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) {
 	mb_info = multiboot_structure;
 	mv = magicvalue;
 
@@ -179,18 +181,21 @@ int kmain(const struct multiboot_info* multiboot_structure, void* magicvalue) {
 void test() 
 {
 	//
-	/*for(int i=0;i<32;i++){
-		_itoa(i, buffer);
-		kprintf("Number: %s\n", buffer);
-	}*/
+	for(int i=0;i<32;i++){
+		kprintf("Number: %d\n", i);
+	}
 
-	//int calculation = 10 / 0;
+	int calculation = 10 / 0;
 }
 
 void callback(char* buf) 
 {
+	if(_strcmp("test", buf) == 0)
+		test();
 	if(_strcmp("sysinfo", buf) == 0)
 		sysinfo();
+	if(_strcmp("clear", buf) == 0)
+		_clear();
 	else
 		kprintf("Buffer: %s\n", buf);
 }
@@ -204,7 +209,6 @@ void prompt(void (*readbuf)(char*)) {
 		char c = 0;
 		do
 		{ 
-next:
 			if(idx == 255)
 				break;
 			c = _getchar();
@@ -212,19 +216,17 @@ next:
 				switch(c) {
 					case 0x08:	//backspace char
 						_putchar(c);	
-						//goto next;		
 						break;
 					case 0x0a:	// linefeed
 						_putchar(c);
 						break;
 					default:
 						_putchar(c);
-						//idx++;
 						buf[idx++] = c;
 				}
 			} 
 		} while(c != '\n'); 
-		(*readbuf)(buf);
+		(*readbuf)(buf);	// call the callback function
 		//kprintf("Buffer: %s", buf);
 	}
 }
