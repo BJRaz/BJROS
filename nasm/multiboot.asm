@@ -113,7 +113,7 @@ _scrollup:
 	mov	ecx, VGA_BYTES_ROW*VGA_ROWS		; count 160x25 bytes
 	rep	movsb	
 	; clear last line
-	mov	edi, VIDEO+VGA_COLS*2*(VGA_ROWS-1)		;
+	mov	edi, VIDEO+VGA_COLS*2*(VGA_ROWS-1)	;
 	mov	eax, 0 
 	mov	ecx, VGA_BYTES_ROW
 	rep 	stosb
@@ -126,6 +126,7 @@ setup_pic:
 	; NOTICE:
 	; at this point the PIC1 and PIC2 is NOT initialized properly. 
 	; The PIC's interrupts needs remapping to other IRQ indexes/addresses:
+	; ICWx -> Instruction Control Word, OCWx -> Operation Control Word
 
 	mov	al, 00010001b		; IWC1: bit 1 => ICW4 is needed
 	out	PIC1_CMD, al		; send ICW1 to PIC1 (master)
@@ -144,7 +145,7 @@ setup_pic:
 
 	mov	al, 00000010b		; ICW3: set input line (from PIC1) to 2 in binary format (010 = 2)
 					; for PIC2
-	out	PIC1_DATA, al		; write ICW3 to pic2
+	out	PIC2_DATA, al		; write ICW3 to pic2
 	
 	mov	al, 1			; ICW4: bit 0 = 1 enables 80x86
 	out	PIC1_DATA, al		; write to both controllers
@@ -296,7 +297,7 @@ timer:
 ; keyboard handler
 ; note: 
 ; I/O port 0x64 (write) is send to the "onboard"-kbdcontroller (i8042)
-; I/O port 0x60 (write) is send to the "in-case"-kbdcontroller
+; I/O port 0x60 (write) is send to the "in-kbd-case"-controller
 ; *---------*                *---------*
 ; *  0x64   *      <-->      *  0x60   *
 ; *---------*                *---------*
@@ -309,12 +310,13 @@ keyboard:
 	xor	eax, eax
 .waitstatus:
 	in	al, 0x64		; read status byte from i8042
-	and	al, 0x1			; read byte 0 - if = 1, then buffer is full
-	cmp	al, 0x1			;
+	and	al, 0x1			; read byte 0, if al = 1, then buffer is full
+	cmp	al, 0x1			; wait as long buffer is not full
 	jne	.waitstatus
 
 
 	in	al, 0x60		; read scancode from keyboard buffer (the keyboard encoder)
+					; key press is called 'make', key release is called 'break'
 	
 	;cmp	al, 0x1c
 	;jne	.cont
@@ -325,12 +327,10 @@ keyboard:
 	mov	ebx, eax		; store scancode - use stack ?
 	and	al, 0x80		; check for bit 7 is 1 (the key is released - aka 'break')
 	cmp	al, 0
-	jnz	.break
-					; otherwize it is a 'make' - key pressed
-	;push	ebx			; arg1 - push the scancode
-	;push	text4			; arg0 - push the format-string
-	;call	kprintf			; print the scancode
-	
+	jnz	.break			; otherwize it is a 'make' - key pressed
+
+					; here the key is pressed:
+					; compare the scancode for identification of key 						
 	cmp 	ebx, 0x2a		; L-shift
 	je	.shift
 	cmp	ebx, 0x36		; R-shift
@@ -348,11 +348,6 @@ keyboard:
 	mov	eax, [kbdarray_upper+ebx]
 .makedone:
 	mov	byte [kbdchar], al
-;	push	eax	
-;	call 	_putchar
-
-;	pop	ebx			; reset stack
-	;pop	eax
 .break:
 	cmp	ebx, 0xAA		; L-shift released
 	je	.shiftup
@@ -510,7 +505,6 @@ gdt:
 		db	00000000b
 
 
-		;dd	0x00cf9b00	; base adderss, type etc, segment limit, base ...
 ; *******
 ; IDT: this is the interrupt descriptor table. The address is set via linker script (for section .idt)
 ; can contain a maximum of 256 entries

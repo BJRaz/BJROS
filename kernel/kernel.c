@@ -126,7 +126,7 @@ int sysinfo()
 
 	int len = 0;
 
-	char* text = "Welcome to Brians kernel...\n";
+	char* text = "Welcome to BJROS ...\n";
 	len = kprint(text);
 	// debug clutter
 	/*kprintf("Kernel test output from kprintf '-190000000': %d\n", -190000000);
@@ -159,23 +159,6 @@ int sysinfo()
 
 	return len;
 
-}
-int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) {
-	mb_info = multiboot_structure;
-	mv = magicvalue;
-
-	// IDT stuff
-	idt_array = (struct interrupt_gate_descriptor*) &idt;
-	set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
-	idt_array += 32;	
-	set_isr_entry(idt_array, (uint32_t)&timer);
-	idt_array += 1;
-	set_isr_entry(idt_array, (uint32_t)&keyboard);
-	idt_array+=32;
-	
-	prompt(callback);
-
-	return 0;	
 }
 
 void test() 
@@ -237,3 +220,24 @@ char _getchar(void) {
 	kbdchar = 0;
 	return result;
 }
+
+int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) {
+	mb_info = multiboot_structure;
+	mv = magicvalue;
+
+	// IDT stuff
+	idt_array = (struct interrupt_gate_descriptor*) &idt;
+	set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
+	idt_array += 32;	
+	set_isr_entry(idt_array, (uint32_t)&timer);
+	idt_array += 1;
+	set_isr_entry(idt_array, (uint32_t)&keyboard);
+	idt_array+=32;
+	
+	prompt(callback);
+
+	return 0;	
+}
+
+
+
