@@ -14,22 +14,34 @@
 #define IDT_FILL	0x0
 #define IDT_FLAGS	0x8e	// TODO: check this - aka 10001110b
 
+#define PIC1_DATA	0x21
+#define PIC1_CMD	0x20
+#define	PIC2_DATA	0xa1
+#define PIC2_CMD	0xa0
 
-extern uint32_t gdtr;
-extern uint32_t idt;
-extern uint32_t custom;		// references a ISR implemented in nasm/multiboot.asm
-extern void keyboard;		// references a ISR implemented - 
-extern void timer;		// references a ISR
-extern char kbdchar;
-extern char kbdarray[128];
-extern char kbdarray_upper[128];	
+#define PIC_EOI		0x20
 
-extern char inb(uint8_t reg);		// get byte from memory register reg
-extern void outb(uint8_t reg, uint8_t byte);	// write byte to memory register reg
-
-void prompt(void (*)(char*));
-void callback(char*);
-void test();
+#ifdef __cplusplus 
+extern "C" {
+#endif
+	extern uint32_t gdtr;
+	extern uint32_t idt;
+	extern uint32_t custom;		// references a ISR implemented in nasm/multiboot.asm
+	extern uint32_t keyboard;	// references a ISR implemented - 
+	extern uint32_t timer;		// references a ISR
+	extern char kbdchar;
+	extern char kbdarray[128];
+	extern char kbdarray_upper[128];	
+	
+	extern char inb(uint8_t reg);		// get byte from memory register reg
+	extern void outb(uint8_t reg, uint8_t byte);	// write byte to memory register reg
+	
+	void prompt(void (*)(char*));
+	void callback(char*);
+	void test();
+#ifdef __cplusplus
+}
+#endif
 
 struct interrupt_gate_descriptor *idt_array;
 struct multiboot_info* mb_info;
@@ -86,8 +98,18 @@ void isr()
 	// remember to send EOI to PIC if used as a hardware-interrupt routine.
 	//i_popall ; TODO: somehow this doesn't work when run in emulator (sets ebp = 0x2)
 	__asm__("popl %eax");
-	outb(0x20, 0x20);				// send EOI to PIC
+	outb(PIC1_CMD, PIC_EOI);				// send EOI to PIC 1
 	//__asm__("hlt");
+	i_return;
+}
+
+// mouse interrupt
+// type: exception, fault - thus stored eip 
+// is pointing to faulting instruction
+void isr_mouse()
+{
+	kprintf("mouse...");
+	outb(PIC2_CMD, PIC_EOI);
 	i_return;
 }
 
@@ -118,7 +140,7 @@ int sysinfo()
 	char buffer[20];
 
 	_itoa(result, buffer);
-	kprintf("**************\n");
+	kprintf("****** BJROS ******\n");
 	kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
 		mb_info->mem_lower, 
 		mb_info->mem_upper);
@@ -138,6 +160,9 @@ int sysinfo()
 	kprintf("Unsigned converstion atou('4000000000')': %u\n", 4000000000);
 
 	kprintln(buffer);*/
+
+	kprintf("PIC1: 0x%x\n", inb(PIC1_DATA));
+	kprintf("PIC2: 0x%x\n", inb(PIC2_DATA));
 
 	showidtinfo(idt_array);	
 	
@@ -220,24 +245,32 @@ char _getchar(void) {
 	kbdchar = 0;
 	return result;
 }
-
-int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) {
-	mb_info = multiboot_structure;
-	mv = magicvalue;
-
-	// IDT stuff
-	idt_array = (struct interrupt_gate_descriptor*) &idt;
-	set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
-	idt_array += 32;	
-	set_isr_entry(idt_array, (uint32_t)&timer);
-	idt_array += 1;
-	set_isr_entry(idt_array, (uint32_t)&keyboard);
-	idt_array+=32;
+#ifdef __cplusplus
+extern "C" {
+#endif
+	int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) {
+		mb_info = multiboot_structure;
+		mv = magicvalue;
 	
-	prompt(callback);
-
-	return 0;	
+		// IDT stuff
+		idt_array = (struct interrupt_gate_descriptor*) &idt;
+		set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
+		idt_array += 32;	
+		set_isr_entry(idt_array, (uint32_t)&timer); 		// slot 32 (0) - system timer
+		idt_array += 1;
+		set_isr_entry(idt_array, (uint32_t)&keyboard);		// slot 33 (1) - keyboard PS/2
+		idt_array += 11;
+		set_isr_entry(idt_array, (uint32_t)&isr_mouse);		// slot 45 (12) - mouse PS/2
+	
+		idt_array+=32;
+		
+		prompt(callback);
+	
+		return 0;	
+	}
+#ifdef __cplusplus
 }
+#endif
 
 
 

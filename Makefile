@@ -1,5 +1,6 @@
 CC=clang
-CFLAGS=-nostdinc -nobuiltininc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -Imultiboot 
+CFLAGS=-nostdinc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -Imultiboot 
+#CFLAGS=-nostdinc -nobuiltininc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -Imultiboot 
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static 
 #-M 
@@ -77,7 +78,8 @@ grub:	$(IMG) kernel.bin $(GRUBFILE)
 	mkfs.vfat -F 16 -v $(LODEV)
 	mount $(LODEV) $(MOUNTPOINT)
 	mkdir -p $(MOUNTPOINT)/boot/grub
-	cp /usr/share/grub/i386-redhat/stage[12] $(MOUNTPOINT)/boot/grub
+	#cp /usr/share/grub/i386-redhat/stage[12] $(MOUNTPOINT)/boot/grub
+	cp ./grub-0.97-i386-pc/boot/grub/stage[12] $(MOUNTPOINT)/boot/grub
 	cp kernel.bin $(MOUNTPOINT)/
 	cp assets/moon-scene_big.xbm.gz $(MOUNTPOINT)/
 	cp grub.conf $(MOUNTPOINT)/boot/grub

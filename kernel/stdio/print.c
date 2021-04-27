@@ -23,7 +23,7 @@ unsigned int 	vx = 0;
 unsigned int 	vy = 0;
 unsigned char* video = (unsigned char*)VIDEO;
 
-extern void _scrollup();
+//extern void _scrollup();
 
 void _clear() 
 {

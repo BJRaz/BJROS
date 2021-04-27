@@ -147,15 +147,17 @@ setup_pic:
 					; for PIC2
 	out	PIC2_DATA, al		; write ICW3 to pic2
 	
-	mov	al, 1			; ICW4: bit 0 = 1 enables 80x86
+	mov	al, 00000001b		; ICW4: bit 0 = 1 enables 80x86
 	out	PIC1_DATA, al		; write to both controllers
 	out	PIC2_DATA, al		;
 				
 	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
 					; only IRQ1 (keyboard) is allowed trough
-					; TODO: setup masks for PIC2
 	out	PIC1_DATA, al		; write OCW1 to PIC1
 
+	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
+					; only IRQ12 (mouse) is allowed trough
+	out	PIC2_DATA, al		; 
 	ret
 ; *******
 ; IDT: setup interrupt handlers in IDT
@@ -226,6 +228,9 @@ inb:
 	mov	esp, ebp	; restore stack-frame
 	pop	ebp
 	ret
+; ********
+; OUT (b, w, d)
+; ********
 
 global outb:function
 outb:
@@ -480,9 +485,9 @@ section .bss
 
 
 ; ******
-; GDT: this is the global descriptor table. The address is set via linker script (for section .gdt)
-;  can contain a maximem of 2^13 (8192) entries, and entry 0 is not used (called a null segment descriptor) 
-;  - dont forget to align to 8 bytes boundary (Why ?)
+; GDT: this is the global descriptor table setup. The address for section .gdt is set via linker script
+; The gdt can contain a maximem of 2^13 (8192) entries, and entry 0 is not used (called a null segment descriptor) 
+;  - dont forget to align to 8 bytes boundary 
 ; *******
 section .gdt
 gdt:
@@ -491,22 +496,23 @@ gdt:
 		dw 	00000000b
 		dw	00000000b
 		dw	00000000b
+					; CODE SEGMENT DESCRIPTOR	
+		dd 	0x0000ffff	; base address (00-15), segment limit (0-15)
+		db	00000000b	; base address (16-23)
+		db 	10011011b	; type(1011 = Code,execute/read), 1001 => S=1, DPL=00, P=1
+		db	11001111b	;
+		db	00000000b
 		
+					; DATA SEGMENT DESCRIPTOR
 		dd 	0x0000ffff	; base address (16-31), segment limit (0-15)
 		db	00000000b
-		db 	10011011b	; type(1011 = Code,execute/read), S=1, DPL=001, P=1
-		db	11001111b
-		db	00000000b
-		
-		dd 	0x0000ffff	; base address (16-31), segment limit (0-15)
-		db	00000000b
-		db 	10010011b	; type(0011 = Data,execute/read), S=1, DPL=001, P=1
+		db 	10010011b	; type(0011 = Data,execute/read), 1001 => S=1, DPL=00, P=1
 		db	11001111b
 		db	00000000b
 
 
 ; *******
-; IDT: this is the interrupt descriptor table. The address is set via linker script (for section .idt)
+; IDT: this is the interrupt descriptor table. The address for section .idt is set via linker script
 ; can contain a maximum of 256 entries
 ; *******
 section .idt
@@ -520,7 +526,7 @@ idt:
 		times 256	db 0	; fill with 0 untill entry index 32
 		; entry index 32(0x20):	
 		dw	0x01dc		; offset B
-		dw	0x0008		; segment 
+		dw	0x0008		; segment (code segment) 
 		db	0x0		; fill bytes 
 		db	10001110b	; byte 8-12 0D110, byte 13-14 (DPL), 15 P (present flag)
 		dw	0x0011		; offset A			

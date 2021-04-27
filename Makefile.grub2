@@ -11,7 +11,7 @@ LODEV=/dev/loop0
 
 $(IMGHD):	 
 	dd if=/dev/zero of=$(IMGHD) bs=1024 count=30000			# makes a hdd image of size 30MB
-	parted $(IMGHD) mklabel msdos mkpart primary 1 10 set 1 boot on # check for 1 10 in start, end for mkpart !
+	parted $(IMGHD) mklabel msdos mkpart primary 1 30 set 1 boot on # check for 1 10 in start, end for mkpart !
 grubhd:	$(IMGHD) $(GRUBFILEHD) kernel.bin
 	kpartx -a $(IMGHD)						# assign partition(s) to loopback-device (dev/mapper/loop0p1)
 	mkfs.ext2 -v $(LODEVHD)						# make filesystem on partition
