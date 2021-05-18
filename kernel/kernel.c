@@ -21,7 +21,20 @@
 
 #define PIC_EOI		0x20
 
+#define ISR_FUNC	__attribute__((__section__(".isr")))
+#define PACKED		__attribute__ ((__packed__)) 
+
 #ifdef __cplusplus 
+
+class Sysinfo
+{
+public:
+	Sysinfo() : test(10) { }
+	unsigned int getTest() { return test; }
+private:
+	unsigned int test;
+};
+
 extern "C" {
 #endif
 	extern uint32_t gdtr;
@@ -50,13 +63,13 @@ void* mv;
 
 // need the attribute packed, otherwise the alignment of short limit is 4 bytes
 // yielding a false value. When packed the alignment is 2 bytes  
-struct __attribute__ ((__packed__)) gdtr_register 
+struct PACKED gdtr_register 
 {
 	uint16_t limit;
 	uint32_t baseaddress;
 };
 
-struct __attribute__ ((__packed__)) interrupt_gate_descriptor
+struct PACKED interrupt_gate_descriptor
 {
 	uint16_t offset_lo;
 	uint16_t segment_selector;
@@ -68,7 +81,7 @@ struct __attribute__ ((__packed__)) interrupt_gate_descriptor
 // called when division by zero occurs
 // type: exception, fault - thus stored eip 
 // is pointing to faulting instruction
-void isr_div_by_zero()
+void ISR_FUNC isr_div_by_zero()
 {
 	//i_pushall;
 	kprintf("DIV BY ZERO Exception - system halted...");
@@ -79,7 +92,7 @@ void isr_div_by_zero()
 
 // test ISR
 // interrupt 20H
-void isr()
+void ISR_FUNC isr()
 {
 	// TODO: store all relevant regs in stack
 	// check stack segment etc.
@@ -106,7 +119,7 @@ void isr()
 // mouse interrupt
 // type: exception, fault - thus stored eip 
 // is pointing to faulting instruction
-void isr_mouse()
+void ISR_FUNC isr_mouse()
 {
 	kprintf("mouse...");
 	outb(PIC2_CMD, PIC_EOI);
@@ -124,7 +137,7 @@ void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t i
 
 void showidtinfo(const struct interrupt_gate_descriptor* idt_array) 
 { 
-	kprintf("IDT entry address: 0x%x\n", &idt_array->offset_lo);
+	kprintf("IDT current entry address: 0x%x\n", &idt_array->offset_lo);
 	kprintf("IDT offset_lo: 0x%x\n", idt_array->offset_lo);
 	kprintf("IDT segment: 0x%x\n", idt_array->segment_selector);
 	kprintf("IDT fill: 0x%x\n", idt_array->fill);
@@ -134,6 +147,8 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 
 int sysinfo() 
 {
+//	Sysinfo s;	// = new Sysinfo();
+
 	char* tal = "842";
 	
 	int result = _atoi(tal);
@@ -159,10 +174,12 @@ int sysinfo()
 
 	kprintf("Unsigned converstion atou('4000000000')': %u\n", 4000000000);
 
-	kprintln(buffer);*/
+	kprintln(buffer);
 
+	kprintf("Sysinfo obj: %d\n", s.getTest());
 	kprintf("PIC1: 0x%x\n", inb(PIC1_DATA));
 	kprintf("PIC2: 0x%x\n", inb(PIC2_DATA));
+*/
 
 	showidtinfo(idt_array);	
 	
@@ -188,7 +205,6 @@ int sysinfo()
 
 void test() 
 {
-	//
 	for(int i=0;i<32;i++){
 		kprintf("Number: %d\n", i);
 	}
@@ -235,7 +251,6 @@ void prompt(void (*readbuf)(char*)) {
 			} 
 		} while(c != '\n'); 
 		(*readbuf)(buf);	// call the callback function
-		//kprintf("Buffer: %s", buf);
 	}
 }
 
@@ -262,7 +277,6 @@ extern "C" {
 		idt_array += 11;
 		set_isr_entry(idt_array, (uint32_t)&isr_mouse);		// slot 45 (12) - mouse PS/2
 	
-		idt_array+=32;
 		
 		prompt(callback);
 	
@@ -271,6 +285,5 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-
 
 
