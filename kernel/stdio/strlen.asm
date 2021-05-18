@@ -28,14 +28,14 @@ _strlen:
 	mov ecx,0x0
 
 	mov esi, [ebp+8]
-loop:
+.loop:
 	lodsb		; read byte to al
 	or al,al	; compare byte to 0
-	jz end		; if zero, branch to end...
+	jz .end		; if zero, branch to end...
 	
 	inc ecx
-	jmp loop	
-end:		
+	jmp .loop	
+.end:		
 	mov eax, ecx
 	mov esp, ebp
 	pop ebp	
