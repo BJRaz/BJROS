@@ -82,7 +82,8 @@ setup:
 	
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
-	
+	; TODO - needs to be done to initialize keyboard/mouse etc.
+	; call	setup_ps2		; setup PS/2 controller (i8042)	
 	call 	setup_pic		; init of PIC (programmable interrupt controller)
 	;call 	setup_interrupts	; setup interrupt service routines etc..
 	
@@ -118,6 +119,17 @@ _scrollup:
 	mov	ecx, VGA_BYTES_ROW
 	rep 	stosb
 	popad
+	ret
+; *******
+;
+; *******
+setup_ps2:
+	mov	al, 0x20
+	out	0x64, al			; 0x20 read status 0 byte
+		
+	in	al, 0x64
+	hlt
+
 	ret
 ; *******
 ; PIC: setup programmable interrupt controller
@@ -299,9 +311,9 @@ timer:
 	sti				; restore interrupts
 	iret
 ; ****************************
-; keyboard handler
+; keyboard handler (i8042)
 ; note: 
-; I/O port 0x64 (write) is send to the "onboard"-kbdcontroller (i8042)
+; I/O port 0x64 (write) is send to the "onboard"-kbdcontroller 
 ; I/O port 0x60 (write) is send to the "in-kbd-case"-controller
 ; *---------*                *---------*
 ; *  0x64   *      <-->      *  0x60   *
@@ -311,7 +323,8 @@ timer:
 global keyboard:function
 keyboard: 				
 	cli
-						pushad
+	pushad
+
 	xor	eax, eax
 .waitstatus:
 	in	al, 0x64		; read status byte from i8042
@@ -341,7 +354,7 @@ keyboard:
 	cmp	ebx, 0x36		; R-shift
 	je	.shift
 	jmp	.make
-.shift
+.shift:
 	or 	byte [kbdstatus], 0x1		; set status byte to mark shift has been pressed
 	jmp	.end	
 .make:
@@ -486,7 +499,7 @@ section .bss
 
 ; ******
 ; GDT: this is the global descriptor table setup. The address for section .gdt is set via linker script
-; The gdt can contain a maximem of 2^13 (8192) entries, and entry 0 is not used (called a null segment descriptor) 
+; The gdt can contain a maximum of 2^13 (8192) entries, and entry 0 is not used (called a null segment descriptor) 
 ;  - dont forget to align to 8 bytes boundary 
 ; *******
 section .gdt
@@ -523,12 +536,13 @@ idt:
 		;db	10001110b
 		;db	0x0011
 
-		times 256	db 0	; fill with 0 untill entry index 32
+		;times 256	db 0	; fill with 0 untill entry index 32
+		
 		; entry index 32(0x20):	
-		dw	0x01dc		; offset B
-		dw	0x0008		; segment (code segment) 
-		db	0x0		; fill bytes 
-		db	10001110b	; byte 8-12 0D110, byte 13-14 (DPL), 15 P (present flag)
-		dw	0x0011		; offset A			
+		;dw	0x01dc		; offset B
+		;dw	0x0008		; segment (code segment) 
+		;db	0x0		; fill bytes 
+		;db	10001110b	; byte 8-12 0D110, byte 13-14 (DPL), 15 P (present flag)
+		;dw	0x0011		; offset A			
 		
 
