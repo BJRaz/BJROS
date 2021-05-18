@@ -1,8 +1,9 @@
 //
-// implementation of _clean, and _putchar
+// implementation of _clear, and _putchar etc.
 // Brian Juul Rasmussen jan 2020
 // 
 // aug 2020: added kprintf, kprint and kprintln
+// dec 2020: added _memset
 //
 // todo:
 // error handling
@@ -11,6 +12,7 @@
 //
 
 #include <stdio.h>
+#include <string.h>
 
 #define VIDEO	0xB8000			// VGA color text buffer (mode 3)
 #define VIDEO_X	80
@@ -21,9 +23,9 @@ unsigned int 	vx = 0;
 unsigned int 	vy = 0;
 unsigned char* video = (unsigned char*)VIDEO;
 
-extern void _scrollup();
+//extern void _scrollup();
 
-void _clean() 
+void _clear() 
 {
 	video = (unsigned char*)VIDEO;
 	for(int i=0;i<VIDEO_X * VIDEO_Y * 2;i++)
@@ -99,7 +101,8 @@ int kprintln(const char* text) {
 int kprintf(const char* format, ...)
 {
 	int count = 0;
-	void* args = (int*)(&format + 4);	// TODO: in clang +4, in gcc this has to be added with +1
+	void* args = (int*)(&format + 1);	// TODO: before: in clang +4, in gcc this has to be added with +1
+						// now: is has to be +1 for clang as well (check)
 
 	//while(*format != '\0')			// TODO: optimize this 
 	while(1)

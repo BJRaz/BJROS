@@ -38,6 +38,7 @@ extern kprintf
 extern _putchar
 
 global gdtr:data
+global gdt:data
 global idt:data				; start of interrupt descriptor table
 global kbdchar:data			; keybaord char data 
 global kbdarray:data
@@ -46,6 +47,7 @@ global kbdarray_upper:data
 section .text
 global _start
 _start:
+
 	jmp	multiboot_entry
 	align 4				; 32 bit aligned	
 multiboot_header:
@@ -58,34 +60,47 @@ multiboot_header:
 	dd	0			; bss end addr.
 	dd	multiboot_entry		; entry addr.
 multiboot_entry:
-
+	
 	cli
+
+	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
+	lidt	[idtr]			; load interrupt descriptor table register with 6 byte memory value
+	
+	jmp	0x8:setup
+setup:
+	mov	cx, 0x10
+	mov	ds, cx
+	mov	es, cx
+	mov	fs, cx
+	mov	gs, cx
+	mov	ss, cx
+
+
 	
 	mov	esp, 0x7c00
 	mov	ebp, esp 	
 	
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
-	
+	; TODO - needs to be done to initialize keyboard/mouse etc.
+	; call	setup_ps2		; setup PS/2 controller (i8042)	
 	call 	setup_pic		; init of PIC (programmable interrupt controller)
 	;call 	setup_interrupts	; setup interrupt service routines etc..
 	
-	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
-	lidt	[idtr]			; load interrupt descriptor table register with 6 byte memory value
 
 	mov	word [cursor.y], 8	; initialization of variables
 	mov	word [cursor.x], 0	; consider make them global
 
 	sti				; enable interrupts
-
- 	call 	kmain			;_kmain			; call kernel main function
+ 	
+	call 	kmain			;_kmain			; call kernel main function
 
 	mov	eax, cs			; (test) stores visible content of Code Section to eax 
 					; at this point the value should be 0d (00000000 00001000) - 1 = index 8
 					; and 0 = GDT, 00 = priviledge level
 mainloop:
 	; TODO: busyloopw - uses 100% cpu .. fix somehow
-	jmp	mainloop
+;	jmp	mainloop
 ;	int	0x20
 	hlt
 ; *******
@@ -99,11 +114,22 @@ _scrollup:
 	mov	ecx, VGA_BYTES_ROW*VGA_ROWS		; count 160x25 bytes
 	rep	movsb	
 	; clear last line
-	mov	edi, VIDEO+VGA_COLS*2*(VGA_ROWS-1)		;
+	mov	edi, VIDEO+VGA_COLS*2*(VGA_ROWS-1)	;
 	mov	eax, 0 
 	mov	ecx, VGA_BYTES_ROW
 	rep 	stosb
 	popad
+	ret
+; *******
+;
+; *******
+setup_ps2:
+	mov	al, 0x20
+	out	0x64, al			; 0x20 read status 0 byte
+		
+	in	al, 0x64
+	hlt
+
 	ret
 ; *******
 ; PIC: setup programmable interrupt controller
@@ -112,6 +138,7 @@ setup_pic:
 	; NOTICE:
 	; at this point the PIC1 and PIC2 is NOT initialized properly. 
 	; The PIC's interrupts needs remapping to other IRQ indexes/addresses:
+	; ICWx -> Instruction Control Word, OCWx -> Operation Control Word
 
 	mov	al, 00010001b		; IWC1: bit 1 => ICW4 is needed
 	out	PIC1_CMD, al		; send ICW1 to PIC1 (master)
@@ -130,17 +157,19 @@ setup_pic:
 
 	mov	al, 00000010b		; ICW3: set input line (from PIC1) to 2 in binary format (010 = 2)
 					; for PIC2
-	out	PIC1_DATA, al		; write ICW3 to pic2
+	out	PIC2_DATA, al		; write ICW3 to pic2
 	
-	mov	al, 1			; ICW4: bit 0 = 1 enables 80x86
+	mov	al, 00000001b		; ICW4: bit 0 = 1 enables 80x86
 	out	PIC1_DATA, al		; write to both controllers
 	out	PIC2_DATA, al		;
 				
 	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
 					; only IRQ1 (keyboard) is allowed trough
-					; TODO: setup masks for PIC2
 	out	PIC1_DATA, al		; write OCW1 to PIC1
 
+	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
+					; only IRQ12 (mouse) is allowed trough
+	out	PIC2_DATA, al		; 
 	ret
 ; *******
 ; IDT: setup interrupt handlers in IDT
@@ -211,6 +240,9 @@ inb:
 	mov	esp, ebp	; restore stack-frame
 	pop	ebp
 	ret
+; ********
+; OUT (b, w, d)
+; ********
 
 global outb:function
 outb:
@@ -279,10 +311,10 @@ timer:
 	sti				; restore interrupts
 	iret
 ; ****************************
-; keyboard handler
+; keyboard handler (i8042)
 ; note: 
-; I/O port 0x64 (write) is send to the "onboard"-kbdcontroller (i8042)
-; I/O port 0x60 (write) is send to the "in-case"-kbdcontroller
+; I/O port 0x64 (write) is send to the "onboard"-kbdcontroller 
+; I/O port 0x60 (write) is send to the "in-kbd-case"-controller
 ; *---------*                *---------*
 ; *  0x64   *      <-->      *  0x60   *
 ; *---------*                *---------*
@@ -291,16 +323,18 @@ timer:
 global keyboard:function
 keyboard: 				
 	cli
-						pushad
+	pushad
+
 	xor	eax, eax
 .waitstatus:
 	in	al, 0x64		; read status byte from i8042
-	and	al, 0x1			; read byte 0 - if = 1, then buffer is full
-	cmp	al, 0x1			;
+	and	al, 0x1			; read byte 0, if al = 1, then buffer is full
+	cmp	al, 0x1			; wait as long buffer is not full
 	jne	.waitstatus
 
 
 	in	al, 0x60		; read scancode from keyboard buffer (the keyboard encoder)
+					; key press is called 'make', key release is called 'break'
 	
 	;cmp	al, 0x1c
 	;jne	.cont
@@ -311,18 +345,16 @@ keyboard:
 	mov	ebx, eax		; store scancode - use stack ?
 	and	al, 0x80		; check for bit 7 is 1 (the key is released - aka 'break')
 	cmp	al, 0
-	jnz	.break
-					; otherwize it is a 'make' - key pressed
-	;push	ebx			; arg1 - push the scancode
-	;push	text4			; arg0 - push the format-string
-	;call	kprintf			; print the scancode
-	
+	jnz	.break			; otherwize it is a 'make' - key pressed
+
+					; here the key is pressed:
+					; compare the scancode for identification of key 						
 	cmp 	ebx, 0x2a		; L-shift
 	je	.shift
 	cmp	ebx, 0x36		; R-shift
 	je	.shift
 	jmp	.make
-.shift
+.shift:
 	or 	byte [kbdstatus], 0x1		; set status byte to mark shift has been pressed
 	jmp	.end	
 .make:
@@ -334,11 +366,6 @@ keyboard:
 	mov	eax, [kbdarray_upper+ebx]
 .makedone:
 	mov	byte [kbdchar], al
-;	push	eax	
-;	call 	_putchar
-
-;	pop	ebx			; reset stack
-	;pop	eax
 .break:
 	cmp	ebx, 0xAA		; L-shift released
 	je	.shiftup
@@ -378,7 +405,7 @@ custom:
 ; *******
 section .data
 	MB_HEADER_MAGIC		equ	0x1badb002
-	MB_HEADER_FLAGS		equ	0x00010003
+	MB_HEADER_FLAGS		equ	0x00000003
 	MB_HEADER_CHECKSUM	equ	-(MB_HEADER_MAGIC+MB_HEADER_FLAGS)
 	INT_DESCRIPTOR_OFFSETA	equ	0
 	INT_DESCRIPTOR_SEGMENT	equ	2
@@ -471,33 +498,34 @@ section .bss
 
 
 ; ******
-; GDT: this is the global descriptor table. The address is set via linker script (for section .gdt)
-;  can contain a maximem of 2^13 (8192) entries, and entry 0 is not used (called a null segment descriptor) 
-;  - dont forget to align to 8 bytes boundary (Why ?)
+; GDT: this is the global descriptor table setup. The address for section .gdt is set via linker script
+; The gdt can contain a maximum of 2^13 (8192) entries, and entry 0 is not used (called a null segment descriptor) 
+;  - dont forget to align to 8 bytes boundary 
 ; *******
 section .gdt
+gdt:
 		db	11111100b	; first segment descriptor (not used)
 		db	00000000b
 		dw 	00000000b
 		dw	00000000b
 		dw	00000000b
-
-		dd 	0x0000ffff	; base address (16-31), segment limit (0-15)
-		db	00000000b
-		db 	10011011b	; type(1011 = Code,execute/read), S=1, DPL=001, P=1
-		db	11001111b
+					; CODE SEGMENT DESCRIPTOR	
+		dd 	0x0000ffff	; base address (00-15), segment limit (0-15)
+		db	00000000b	; base address (16-23)
+		db 	10011011b	; type(1011 = Code,execute/read), 1001 => S=1, DPL=00, P=1
+		db	11001111b	;
 		db	00000000b
 		
+					; DATA SEGMENT DESCRIPTOR
 		dd 	0x0000ffff	; base address (16-31), segment limit (0-15)
 		db	00000000b
-		db 	10010011b	; type(0011 = Data,execute/read), S=1, DPL=001, P=1
+		db 	10010011b	; type(0011 = Data,execute/read), 1001 => S=1, DPL=00, P=1
 		db	11001111b
 		db	00000000b
 
 
-		;dd	0x00cf9b00	; base adderss, type etc, segment limit, base ...
 ; *******
-; IDT: this is the interrupt descriptor table. The address is set via linker script (for section .idt)
+; IDT: this is the interrupt descriptor table. The address for section .idt is set via linker script
 ; can contain a maximum of 256 entries
 ; *******
 section .idt
@@ -508,12 +536,13 @@ idt:
 		;db	10001110b
 		;db	0x0011
 
-		times 256	db 0	; fill with 0 untill entry index 32
+		;times 256	db 0	; fill with 0 untill entry index 32
+		
 		; entry index 32(0x20):	
-		dw	0x01dc		; offset B
-		dw	0x0008		; segment 
-		db	0x0		; fill bytes 
-		db	10001110b	; byte 8-12 0D110, byte 13-14 (DPL), 15 P (present flag)
-		dw	0x0011		; offset A			
+		;dw	0x01dc		; offset B
+		;dw	0x0008		; segment (code segment) 
+		;db	0x0		; fill bytes 
+		;db	10001110b	; byte 8-12 0D110, byte 13-14 (DPL), 15 P (present flag)
+		;dw	0x0011		; offset A			
 		
 

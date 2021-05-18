@@ -1,6 +1,8 @@
 // Brian Juul Rasmussen 2020
 //
 #include <stdio.h>
+#include <includes/string.h>
+#include <string.h>
 #include <stdint.h>
 #include <includes/stdio.h>
 #define DEBUG
@@ -9,31 +11,52 @@ void printverylong();
 int _kprintf(const char* format, ...);
 void testuinttohex(uint32_t number);
 
-void* _memset(void* buffer, unsigned char c, int size) {
+// TODO: optimize
+void* _memset(void* buffer, const unsigned char c, int size) {
 	int idx = 0;
-	void *start = buffer;
-	while(idx < size) {
-		*(unsigned char*)buffer = c;
-		idx++;
-		buffer++;
+	void* start = buffer;
+	while(idx++ < size) {
+		*(unsigned char*)start++ = c;
 	}
-	return buffer -= size;
+	return buffer;
 }
 
+void callback(char* buf) {
+	_kprintf("Her: %s\n", buf); 
+}
+
+void prompt(void (*callback)(char*)) {
+	(*callback)("Hest");
+}
 
 int main(int argc, char** argv) 
 {
+	char s[2];
+       	s[0] = 'B';
+	s[1] = 'r';
+	const char* st1 = "Brian";
+	const char* st2 = "Brian";
+	if(_strcmp(st1, s) != 0) 
+		puts("Not equal strings");
+	else
+		puts("Equal strings");
+
+
+	prompt(callback);
+
+	char* text1 = "Brian tester: 0x%d, 0x%d hest\n";
+	_kprintf(text1, &st1, &st1);
 	char* arg1 = 0;
 
 	if(argc > 1)
 		arg1 = (char*)argv[1];
 	
-	char buf[20];
+	char buf[5];
 
- 	void* p = _memset(buf, 0, 20);
+ 	void* p = _memset(buf, 0, 5);
 
 	char str = 'M'; //"Brian";
-	printf("%d\n", strlen(str));
+	printf("%d\n", strlen(&str));
 
 	// test _atoi
 	int number = _atoi(arg1);
@@ -88,7 +111,7 @@ void printverylong()
 int _kprintf(const char* format, ...)
 {
 	int count = 0;
-	int *args = (int*)&format + 4;
+	int *args = (int*)(&format + 1);
 
 	while(*format != '\0')
 	{
@@ -103,8 +126,8 @@ int _kprintf(const char* format, ...)
 					{
 						char buf[11];
 						_utox(*(unsigned int*)args, buf);
-						printf(buf);	
-						args = 4 + (char*)args;
+						puts(buf);	
+						args = 4 + (int*)args;
 						format++;
 					}
 					break;
@@ -112,8 +135,8 @@ int _kprintf(const char* format, ...)
 					{
 						char buf[11];
 						_itoa(*(int*)args, buf);
-						printf(buf);
-						args = 4 + (char*)args;
+						puts(buf);
+						args = 4 + (int*)args;
 						format++;
 					}
 					break;
@@ -121,22 +144,22 @@ int _kprintf(const char* format, ...)
 					{
 						char buf[11];
 						_utoa(*(unsigned int*)args, buf);
-						printf(buf);
-						args = 4 + (char*)args;
+						puts(buf);
+						args = 4 + (int*)args;
 						format++;
 					}
 					break;
 					case 's':	// string
 					{
-						printf(*(char**)args);	
-						args = 4 + (char*)args;
+						puts(*(char**)args);	
+						args = 4 + (int*)args;
 						format++;
 					}
 					break;
 					case 'c':	// string
 					{
-						printf(*args);	
-						args = 4 + (char*)args;
+						puts((char*)args);	
+						args = 4 + (int*)args;
 						format++;
 					}
 					break;

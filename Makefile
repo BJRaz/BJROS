@@ -1,13 +1,15 @@
 CC=clang
-CFLAGS=-nostdinc -nobuiltininc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -Imultiboot -g
+#CFLAGS=-nostdinc -Wpadded -std=c99 -m32 -c -Wall -fno-stack-protector -Iincludes -Imultiboot 
+CFLAGS=-nostdinc -nobuiltininc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -Imultiboot 
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static 
+#LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
 #-M 
 AS=nasm
-ASFLAGS=-felf32 -Fdwarf  
+ASFLAGS=-felf32 -Fdwarf   
 LODEV=/dev/loop0
 OBJDIR:=bin
-OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o kernel.o) 
+OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o string.so kernel.o) 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
 
 # settings floppy
@@ -77,7 +79,8 @@ grub:	$(IMG) kernel.bin $(GRUBFILE)
 	mkfs.vfat -F 16 -v $(LODEV)
 	mount $(LODEV) $(MOUNTPOINT)
 	mkdir -p $(MOUNTPOINT)/boot/grub
-	cp /usr/share/grub/i386-redhat/stage[12] $(MOUNTPOINT)/boot/grub
+	#cp /usr/share/grub/i386-redhat/stage[12] $(MOUNTPOINT)/boot/grub
+	cp ./grub-0.97-i386-pc/boot/grub/stage[12] $(MOUNTPOINT)/boot/grub
 	cp kernel.bin $(MOUNTPOINT)/
 	cp assets/moon-scene_big.xbm.gz $(MOUNTPOINT)/
 	cp grub.conf $(MOUNTPOINT)/boot/grub
@@ -94,4 +97,4 @@ TAGS:
 	ctags --exclude=k.c -R .
 tests:	$(OBJS) itoa.c 
 	#$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 
-	$(CC) -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so 
+	$(CC) -m32 -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so bin/string.so 
