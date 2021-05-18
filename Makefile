@@ -1,11 +1,12 @@
 CC=clang
-CFLAGS=-nostdinc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -Imultiboot 
-#CFLAGS=-nostdinc -nobuiltininc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -Imultiboot 
+#CFLAGS=-nostdinc -Wpadded -std=c99 -m32 -c -Wall -fno-stack-protector -Iincludes -Imultiboot 
+CFLAGS=-nostdinc -nobuiltininc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iincludes -Imultiboot 
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static 
+#LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
 #-M 
 AS=nasm
-ASFLAGS=-felf32 -Fdwarf  
+ASFLAGS=-felf32 -Fdwarf   
 LODEV=/dev/loop0
 OBJDIR:=bin
 OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o string.so kernel.o) 
