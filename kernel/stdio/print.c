@@ -38,6 +38,36 @@ void _putchar(char c)
 {
 	if(c == '\n')
 	{
+newline:
+		vx = 0;
+		if(vy < VIDEO_Y - 1)
+			vy++;
+			
+		else
+			_scrollup();
+		return;		
+	}
+	if(c == 0x08) 
+	{	
+		// backspace
+		c = 0;
+		vx--;
+		*(video + (vx + vy * VIDEO_X) * 2) = c;
+		*(video + (vx + vy * VIDEO_Y) * 2 + 1) = ATTRIBUTE;
+		return;
+	}
+
+	*(video + (vx + vy * VIDEO_X) * 2) = c;
+	*(video + (vx + vy * VIDEO_Y) * 2 + 1) = ATTRIBUTE;
+	vx++;
+	if(vx >= VIDEO_X)
+		goto newline;
+}
+
+void _putchar_new(char c) 
+{
+	if(c == '\n')
+	{
 		if(vy < VIDEO_Y)
 			video = (unsigned char*)VIDEO + (VIDEO_X * ++vy * 2);	// mult by 2 to account for attrbute + char (2 bytes)
 		if(vy >= VIDEO_Y)

@@ -113,11 +113,10 @@ _scrollup:
 	mov	edi, VIDEO
 	mov	ecx, VGA_BYTES_ROW*VGA_ROWS		; count 160x25 bytes
 	rep	movsb	
-	; clear last line
-	mov	edi, VIDEO+VGA_COLS*2*(VGA_ROWS-1)	;
-	mov	eax, 0 
+	mov	edi, VIDEO+VGA_COLS*2*(VGA_ROWS-1)	; clear last line
+	mov	ax, 0x0700
 	mov	ecx, VGA_BYTES_ROW
-	rep 	stosb
+	rep 	stosw
 	popad
 	ret
 ; *******
