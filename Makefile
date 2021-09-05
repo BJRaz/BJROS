@@ -28,7 +28,7 @@ vpath %.h includes					# search for specific filetypes in <dir>
 
 all: kernel.bin TAGS
 
-$(OBJS): | $(OBJDIR)
+$(OBJS): | $(OBJDIR)					# order-only prerequisite
 
 # had to make this rule match *.so (shared object) 
 # when referencing assembly files

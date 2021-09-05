@@ -26,11 +26,16 @@ bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protec
 %define PIC2_DATA	0xa1
 %define PIC2_CMD	0xa0
 
+%define PS2_DATA	0x60		; i8042 ps/2 controller data port (r/w)
+%define PS2_CMD		0x64		; i8042 ps/2 status register (read), command register (write)
+
+
 %define STACK_SIZE	0x4000
 %define	VIDEO		0xb8000		; VIDEO address for text color mode
 %define VGA_ROWS	25
 %define	VGA_COLS	80
 %define VGA_BYTES_ROW	160		; in vga text mode 3 - 80x25 16 colors uses 2 bytes mem pr character
+
 extern kmain				; kmail is kernel main function ing if binary format.
 extern cursor
 extern print
@@ -61,7 +66,7 @@ multiboot_header:
 	dd	multiboot_entry		; entry addr.
 multiboot_entry:
 	
-	cli
+	cli				; disable interrupts
 
 	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
 	lidt	[idtr]			; load interrupt descriptor table register with 6 byte memory value
@@ -100,9 +105,11 @@ setup:
 					; and 0 = GDT, 00 = priviledge level
 mainloop:
 	; TODO: busyloopw - uses 100% cpu .. fix somehow
-;	jmp	mainloop
-;	int	0x20
+	;	jmp	mainloop
+	;	int	0x20
+	
 	hlt
+
 ; *******
 ; VGA
 ; *******
@@ -122,11 +129,52 @@ _scrollup:
 ; *******
 ;
 ; *******
+global setup_ps2:function
 setup_ps2:
+	
+_waitio:
+	in	al, PS2_CMD
+	and	al, 10b
+	jnz	_waitio
+	
+	mov	al, 0xAD
+	out	PS2_CMD, al		; disable ps/2 port 1 (kbd)
+ _waitio1:
+	in	al, PS2_CMD
+	and	al, 10b
+	jnz	_waitio1
+	
+	mov	al, 0xA7
+	out	PS2_CMD, al		; disable ps/2 port 2 (mouse)
+
 	mov	al, 0x20
-	out	0x64, al			; 0x20 read status 0 byte
+	out	PS2_CMD, al		; 0x20 read configuration status byte
 		
-	in	al, 0x64
+_waitio2:
+	in	al, PS2_CMD
+	and	al, 10b
+	jnz	_waitio2
+
+	in	al, PS2_DATA
+	and	al, 1011100b		; mask out bit 0,1 and 6
+	mov	bl, al			; store result
+_waitio3:
+	in	al, PS2_CMD
+	and	al, 10b
+	jnz	_waitio3
+	
+	mov 	al, 0x60
+	out	PS2_CMD, al		; write 0x60 command, next byte is parameter
+
+_waitio3_1:
+	in	al, PS2_CMD
+	and	al, 10b
+	jnz	_waitio3_1
+
+	mov	al, bl			; masked bits
+	out	PS2_DATA, al		;
+	
+
 	hlt
 
 	ret
@@ -230,12 +278,11 @@ global inb:function
 inb:
 	push	ebp		; stack management
 	mov	ebp, esp
-	push	edx		;
+	push	edx
 	mov	edx, [ebp+8]	; get argument / the register
 	xor	eax, eax
 	in	al, dx		; get byte from input register
-	pop	edx		; restore edx
-	
+	pop	edx
 	mov	esp, ebp	; restore stack-frame
 	pop	ebp
 	ret
@@ -253,6 +300,7 @@ outb:
 	mov	eax, [ebp+12]	; second argument (the value)
 	out	dx, al		; write value to output register
 	pop	eax		; restore eax from stack
+
 	mov	esp, ebp	; restore stack frame
 	pop	ebp
 	ret
