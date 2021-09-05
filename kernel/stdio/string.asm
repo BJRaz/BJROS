@@ -25,7 +25,7 @@ _strcmp:
 
 	mov	ebx, 1
 	jmp	.out
-.match
+.match:
 	cmp	al, 0
 	je	.out
 
