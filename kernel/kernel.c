@@ -125,7 +125,9 @@ void ISR_FUNC isr()
 // is pointing to faulting instruction
 void ISR_FUNC isr_mouse()
 {
-	kprintf("mouse...");
+	uint8_t response = inb(PS2_DATA);
+	kprintf("mouse... 0x%x\n", response);
+	outb(PIC1_CMD, PIC_EOI);
 	outb(PIC2_CMD, PIC_EOI);
 	i_return;
 }
@@ -261,7 +263,14 @@ void setupps2()
 	ps2_controller_write_data(0xFF);
 
 	ps2_response = ps2_controller_read_data();
-kprintf("Ps2 first port reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xfa) ? "OK" : "NOT OK");
+	kprintf("Ps2 first port reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xfa) ? "OK" : "NOT OK");
+	
+	/*ps2_controller_send_command(0xD4);
+	ps2_controller_write_data(0xFF);
+
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 second port reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xfa) ? "OK" : "NOT OK");
+	*/
 
 	return;	
 		
@@ -467,16 +476,16 @@ extern "C" {
 	int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) {
 		mb_info = multiboot_structure;
 		mv = magicvalue;
-	
+
 		// IDT stuff
 		idt_array = (struct interrupt_gate_descriptor*) &idt;
 		set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
 		idt_array += 32;	
-		set_isr_entry(idt_array, (uint32_t)&timer); 		// slot 32 (0) - system timer
-		idt_array += 1;
-		set_isr_entry(idt_array, (uint32_t)&keyboard);		// slot 33 (1) - keyboard PS/2
-		idt_array += 11;
-		set_isr_entry(idt_array, (uint32_t)&isr_mouse);		// slot 45 (12) - mouse PS/2
+		set_isr_entry(idt_array + 0, (uint32_t)&timer); 		// slot 32 (0) - system timer
+		//idt_array += 1;
+		set_isr_entry(idt_array + 1, (uint32_t)&keyboard);		// slot 33 (1) - keyboard PS/2
+		//idt_array += 7;
+		set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse);		// slot 45 (12) - mouse PS/2
 	
 		setupps2();
 		

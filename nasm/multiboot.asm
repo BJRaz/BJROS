@@ -54,7 +54,7 @@ global _start
 _start:
 
 	jmp	multiboot_entry
-	align 4				; 32 bit aligned	
+	align 	4			; 32 bit aligned	
 multiboot_header:
 	dd	MB_HEADER_MAGIC		; magic number
 	dd	MB_HEADER_FLAGS		; flags
@@ -210,11 +210,11 @@ setup_pic:
 	out	PIC1_DATA, al		; write to both controllers
 	out	PIC2_DATA, al		;
 				
-	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
+	mov	al, 11111001b		; OCW1 interrupt mask = 11111101 
 					; only IRQ1 (keyboard) is allowed trough
 	out	PIC1_DATA, al		; write OCW1 to PIC1
 
-	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
+	mov	al, 11101110b		; OCW1 interrupt mask = 11111101 
 					; only IRQ12 (mouse) is allowed trough
 	out	PIC2_DATA, al		; 
 	ret
