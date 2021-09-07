@@ -1,10 +1,10 @@
 // Brian Juul Rasmussen 2020
 //
 #include <stdio.h>
-#include <includes/string.h>
+#include <include/string.h>
 #include <string.h>
 #include <stdint.h>
-#include <includes/stdio.h>
+#include <include/stdio.h>
 #define DEBUG
 
 void printverylong();
