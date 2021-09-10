@@ -41,6 +41,7 @@ extern cursor
 extern print
 extern kprintf
 extern _putchar
+extern setup_ps2
 
 global gdtr:data
 global gdt:data
@@ -87,14 +88,14 @@ setup:
 	
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
-	; TODO - needs to be done to initialize keyboard/mouse etc.
-	; call	setup_ps2		; setup PS/2 controller (i8042)	
-	call 	setup_pic		; init of PIC (programmable interrupt controller)
-	;call 	setup_interrupts	; setup interrupt service routines etc..
-	
 
-	mov	word [cursor.y], 8	; initialization of variables
-	mov	word [cursor.x], 0	; consider make them global
+	call 	setup_pic		; init of PIC (programmable interrupt controller)
+
+	call	setup_ps2		; setup the PS/2 controller
+	
+	;call 	setup_interrupts	; setup interrupt service routines etc..
+
+	call 	setup_vga		; 	
 
 	sti				; enable interrupts
  	
@@ -104,15 +105,15 @@ setup:
 					; at this point the value should be 0d (00000000 00001000) - 1 = index 8
 					; and 0 = GDT, 00 = priviledge level
 mainloop:
-	; TODO: busyloopw - uses 100% cpu .. fix somehow
-	;	jmp	mainloop
-	;	int	0x20
-	
 	hlt
-
 ; *******
 ; VGA
 ; *******
+setup_vga:
+	mov	word [cursor.y], 8	; initialization of variables
+	mov	word [cursor.x], 0	; consider make them global
+	ret
+
 global _scrollup:function
 _scrollup:	
 	pushad
@@ -125,58 +126,6 @@ _scrollup:
 	mov	ecx, VGA_BYTES_ROW
 	rep 	stosw
 	popad
-	ret
-; *******
-;
-; *******
-global setup_ps2:function
-setup_ps2:
-	
-_waitio:
-	in	al, PS2_CMD
-	and	al, 10b
-	jnz	_waitio
-	
-	mov	al, 0xAD
-	out	PS2_CMD, al		; disable ps/2 port 1 (kbd)
- _waitio1:
-	in	al, PS2_CMD
-	and	al, 10b
-	jnz	_waitio1
-	
-	mov	al, 0xA7
-	out	PS2_CMD, al		; disable ps/2 port 2 (mouse)
-
-	mov	al, 0x20
-	out	PS2_CMD, al		; 0x20 read configuration status byte
-		
-_waitio2:
-	in	al, PS2_CMD
-	and	al, 10b
-	jnz	_waitio2
-
-	in	al, PS2_DATA
-	and	al, 1011100b		; mask out bit 0,1 and 6
-	mov	bl, al			; store result
-_waitio3:
-	in	al, PS2_CMD
-	and	al, 10b
-	jnz	_waitio3
-	
-	mov 	al, 0x60
-	out	PS2_CMD, al		; write 0x60 command, next byte is parameter
-
-_waitio3_1:
-	in	al, PS2_CMD
-	and	al, 10b
-	jnz	_waitio3_1
-
-	mov	al, bl			; masked bits
-	out	PS2_DATA, al		;
-	
-
-	hlt
-
 	ret
 ; *******
 ; PIC: setup programmable interrupt controller
@@ -210,11 +159,11 @@ setup_pic:
 	out	PIC1_DATA, al		; write to both controllers
 	out	PIC2_DATA, al		;
 				
-	mov	al, 11111001b		; OCW1 interrupt mask = 11111101 
+	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
 					; only IRQ1 (keyboard) is allowed trough
 	out	PIC1_DATA, al		; write OCW1 to PIC1
 
-	mov	al, 11101110b		; OCW1 interrupt mask = 11111101 
+	mov	al, 11111111b		; OCW1 interrupt mask = 11111101 
 					; only IRQ12 (mouse) is allowed trough
 	out	PIC2_DATA, al		; 
 	ret
@@ -310,6 +259,15 @@ outb:
 ; *******
 section .isr
 ; ***************************
+; TEST INTERRUPT FUNCTION
+; ***************************
+global interrupt:function
+interrupt:
+	pushad
+	int	0x2C			;
+	popad
+	ret
+; ***************************
 ; division by zero handler
 ; ***************************
 division_by_zero:
@@ -353,7 +311,6 @@ timer:
 .end:
 	mov	al, 0x20		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
-;	pop	eax
 	popad
 	sti				; restore interrupts
 	iret
