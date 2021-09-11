@@ -23,7 +23,7 @@
 #define KBD_ARRAY_SIZE	128
 
 #define PS2_DATA	0x60		// i8042 ps/2 controller data port (r/w)
-#define PS2_CMD		0x64		//  i8042 ps/2 status register (read), command register (write)
+#define PS2_CMD		0x64		// i8042 ps/2 status register (read), command register (write)
 
 #define ISR_FUNC	__attribute__((__section__(".isr")))
 #define PACKED		__attribute__ ((__packed__)) 
@@ -43,9 +43,9 @@ extern "C" {
 #endif
 	extern uint32_t gdtr;
 	extern uint32_t idt;
-	extern uint32_t custom;		// references a ISR implemented in nasm/multiboot.asm
-	extern uint32_t keyboard;	// references a ISR implemented - 
-	extern uint32_t timer;		// references a ISR
+	extern uint32_t isr_custom;			// references a ISR implemented in nasm/multiboot.asm
+	extern uint32_t isr_keyboard;		// references a ISR implemented - 
+	extern uint32_t isr_timer;		// references a ISR
 	extern char kbdchar;
 	extern char kbdarray[KBD_ARRAY_SIZE];
 	extern char kbdarray_upper[KBD_ARRAY_SIZE];	
@@ -65,6 +65,160 @@ struct interrupt_gate_descriptor *idt_array;
 struct multiboot_info* mb_info;
 void* mv;
 
+
+void ps2_controller_send_command(uint8_t command)
+{
+	while(inb(PS2_CMD) & 0x2);	// 
+	outb(PS2_CMD, command); 
+}
+
+void ps2_controller_write_data(uint8_t data) 
+{
+	while(inb(PS2_CMD) & 0x2);	//	 
+	outb(PS2_DATA, data); 
+}
+
+uint8_t ps2_controller_read_data()
+{
+	while(!(inb(PS2_CMD) & 0x1));	//
+	return inb(PS2_DATA);
+}
+
+void setup_ps2()
+{
+	uint8_t ps2_response = 0;
+
+	// step 1: Initialize all USB devices, and disable USB legacy support
+	//
+	// step 2: check for existence of i8042 controller
+	// Note: should be done via ACPI "IA PC Boot architecture" flags 
+	// offset 109 in FADT (	Fixed ACPI description table )
+	// At the moment, if its not present the system may fail
+
+	// STEP 3-4: disable devices and read result
+	// send RESET to kbd device
+	ps2_controller_write_data(0xFF);
+	kprintf("Data written\n");
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+
+	// send RESET to mouse device
+	ps2_controller_send_command(0xD4);
+	ps2_controller_write_data(0xFF);
+	kprintf("Data written\n");
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+
+	// disable first PS2 port (kbd)
+	ps2_controller_send_command(0xAD);
+	kprintf("Command sendt\n");
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+
+	// disable second PS2 port (mouse)
+	ps2_controller_send_command(0xA7);
+	kprintf("Command sendt\n");
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+	
+	// STEP 5: Get and set configuration byte 
+	ps2_controller_send_command(0x20);
+	kprintf("Command sendt\n");
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+	
+	kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
+	ps2_response &= 0b1011100;		// clear bits 0,1 and 6
+
+	kprintf("Ps2 changed configuration byte: 0x%x\n", ps2_response);
+	ps2_controller_send_command(0x60);
+	ps2_controller_write_data(ps2_response);
+	
+	// STEP 6: Do self test - should result in 0x55 
+	ps2_controller_send_command(0xAA);
+	kprintf("Command sendt (self test)\n");
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 self test status: 0x%x\n", ps2_response);
+
+	// STEP 7: (optional)
+	// STEP 8: first and second port status test 
+	ps2_controller_send_command(0xAB);
+	kprintf("Command sendt (1 port status test)\n");
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 first port test status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+	ps2_controller_send_command(0xA9);
+	kprintf("Command sendt (2 port status test)\n");
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 second port test status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+
+	// STEP 9: enable ports 1 and 2
+	ps2_controller_send_command(0xAE);
+	kprintf("Command sendt (1 port enable)\n");
+	//ps2_response = ps2_controller_read_data();
+	//kprintf("Ps2 first port enable status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+	ps2_controller_send_command(0xA8);
+	kprintf("Command sendt (2 port enable)\n");
+	//ps2_response = ps2_controller_read_data();
+	//kprintf("Ps2 second port enable status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+	ps2_controller_send_command(0x20);
+	kprintf("Command sendt\n");
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
+	ps2_response |= 0b0100011;		// enable bits 0,1 and 6
+
+	ps2_controller_send_command(0x60);
+	ps2_controller_write_data(ps2_response);
+
+	//ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 changed configuration byte: 0x%x\n", ps2_response);
+	
+	// STEP 10: reset devices
+	
+	ps2_controller_send_command(0xD1);
+	ps2_controller_write_data(0xFF);	// KDB RESET AND START SELF TEST -  responds: AA = OK, FE = Resend, FC/FD = Self test failed 
+
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 keyboard reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK");
+
+	ps2_controller_send_command(0xD4);	// Tell controller to access the mouse
+	ps2_controller_write_data(0xFF);	// MOUSE RESET AND START SELF TEST
+
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 mouse reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xfa) ? "OK" : "NOT OK");
+
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 mouse reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK");
+	
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 mouse reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0x0) ? "OK" : "NOT OK");
+/*	
+	ps2_controller_send_command(0xD4);	// get mouse info
+	ps2_controller_write_data(0xE9);
+	ps2_response = ps2_controller_read_data();
+	
+	kprintf("PS2 mouse info: 0x%x\n", ps2_response);
+*/
+	ps2_controller_send_command(0xD4);	// 
+	ps2_controller_write_data(0xF3);	// set sample rate command
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 command status: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
+
+	ps2_controller_send_command(0xD4);	// 
+	ps2_controller_write_data(100);		// set sample rate to 100
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 command status: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
+
+
+	ps2_controller_send_command(0xD4);	// 
+	ps2_controller_write_data(0xF4);	// enable data reporting - mouse wont work until this is set
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 command status: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
+
+
+	return;	
+		
+
+}
 
 // need the attribute packed, otherwise the alignment of short limit is 4 bytes
 // yielding a false value. When packed the alignment is 2 bytes  
@@ -124,14 +278,15 @@ void ISR_FUNC isr_div_by_zero()
 }
 
 // mouse interrupt
-// type: exception, fault - thus stored eip 
-// is pointing to faulting instruction
 void ISR_FUNC isr_mouse()
 {
-	uint8_t response = inb(PS2_DATA);
+	__asm__("cli");
+	kprintf("Reads data\n");
+	uint8_t response = ps2_controller_read_data(); 
 	kprintf("mouse... 0x%x\n", response);
 	outb(PIC1_CMD, PIC_EOI);
 	outb(PIC2_CMD, PIC_EOI);
+	__asm__("sti");
 	i_return;
 }
 
@@ -153,134 +308,6 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 	kprintf("IDT flags: 0x%x\n", idt_array->flags);
 	kprintf("IDT offset_hi: 0x%x\n", idt_array->offset_hi);
 }
-
-void ps2_controller_send_command(uint8_t command)
-{
-	while(inb(PS2_CMD) & 0x2);	// 
-	outb(PS2_CMD, command); 
-}
-
-void ps2_controller_write_data(uint8_t data) 
-{
-	while(inb(PS2_CMD) & 0x2);	//	 
-	outb(PS2_DATA, data); 
-}
-
-uint8_t ps2_controller_read_data()
-{
-	while(!inb(PS2_CMD) & 0x1);	//
-	return inb(PS2_DATA);
-}
-
-void setup_ps2()
-{
-	uint8_t ps2_response = NULL;
-
-	// step 1: Initialize all USB devices, and disable USB legacy support
-	//
-	// step 2: check for existence of i8042 controller
-	// Note: should be done via ACPI "IA PC Boot architecture" flags 
-	// offset 109 in FADT (	Fixed ACPI description table )
-	// At the moment, if its not present the system may fail
-
-	// STEP 3-4: disable devices and read result
-	// send RESET to kbd device
-	ps2_controller_write_data(0xFF);
-	//kprintf("Data written\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 present status: 0x%x\n", ps2_response);
-
-	// send RESET to mouse device
-	ps2_controller_send_command(0xD4);
-	ps2_controller_write_data(0xFF);
-	//kprintf("Data written\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 present status: 0x%x\n", ps2_response);
-
-	// disable first PS2 port (kbd)
-	ps2_controller_send_command(0xAD);
-	//kprintf("Command sendt\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 present status: 0x%x\n", ps2_response);
-
-	// disable second PS2 port (mouse)
-	ps2_controller_send_command(0xA7);
-	//kprintf("Command sendt\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 present status: 0x%x\n", ps2_response);
-	
-	// STEP 5: Get and set configuration byte 
-	ps2_controller_send_command(0x20);
-	//kprintf("Command sendt\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 present status: 0x%x\n", ps2_response);
-	
-	//kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
-	ps2_response &= 0b1011100;		// clear bits 0,2 and 6
-
-	//kprintf("Ps2 changed configuration byte: 0x%x\n", ps2_response);
-	ps2_controller_send_command(0x60);
-	ps2_controller_write_data(ps2_response);
-	
-	// STEP 6: Do self test - should result in 0x55 
-	ps2_controller_send_command(0xAA);
-	//kprintf("Command sendt (self test)\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 self test status: 0x%x\n", ps2_response);
-
-	// STEP 7: (optional)
-	// STEP 8: first and second port status test 
-	ps2_controller_send_command(0xAB);
-	//kprintf("Command sendt (1 port status test)\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 first port test status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
-	ps2_controller_send_command(0xA9);
-	//kprintf("Command sendt (2 port status test)\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 second port test status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
-
-	// STEP 9: enable ports 1 and 2
-	ps2_controller_send_command(0xAE);
-	//kprintf("Command sendt (1 port enable)\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 first port enable status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
-	ps2_controller_send_command(0xA8);
-	//kprintf("Command sendt (2 port enable)\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 second port enable status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
-	ps2_controller_send_command(0x20);
-	//kprintf("Command sendt\n");
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
-	ps2_response |= 0b0100011;		// enable bits 0,2 and 6
-
-	ps2_controller_send_command(0x60);
-	ps2_controller_write_data(ps2_response);
-
-//	ps2_response = ps2_controller_read_data();
-//	kprintf("Ps2 changed configuration byte: 0x%x\n", ps2_response);
-	
-	// STEP 10: reset devices
-	
-	ps2_controller_send_command(0xD1);
-	ps2_controller_write_data(0xFF);
-
-	ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 first port reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xfa) ? "OK" : "NOT OK");
-	
-	/*ps2_controller_send_command(0xD4);
-	ps2_controller_write_data(0xFF);
-
-	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 second port reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xfa) ? "OK" : "NOT OK");
-	*/
-
-	return;	
-		
-
-}
-
-
 int sysinfo() 
 {
 
@@ -348,6 +375,7 @@ void test()
 	}
 
 	int calculation = 10 / 0;
+	kprintf("Calc: %d\n", calculation);
 }
 
 void callback(char* buf) 
@@ -408,17 +436,21 @@ extern "C" {
 		mv = magicvalue;
 
 		// IDT stuff
+		
 		idt_array = (struct interrupt_gate_descriptor*) &idt;
 		set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
+		
 		idt_array += 32;	
-		set_isr_entry(idt_array + 0, (uint32_t)&timer); 		// slot 32 (0) - system timer
-		//idt_array += 1;
-		set_isr_entry(idt_array + 1, (uint32_t)&keyboard);		// slot 33 (1) - keyboard PS/2
-		//idt_array += 7;
-		set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse);		// slot 45 (12) - mouse PS/2
-	
+		
+		set_isr_entry(idt_array, (uint32_t)&isr_timer); 			// slot 32 (0) - system timer
+		set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);		// slot 33 (1) - keyboard PS/2
+		//set_isr_entry(idt_array + 8, (uint32_t)&timer);			// RTC (8) Real time clock
+		set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse);		// slot (12) - mouse PS/2
+		
+		__asm__("sti");							// enable interrupts	
+		
 		prompt(callback);
-	
+		
 		return 0;	
 	}
 #ifdef __cplusplus

@@ -49,7 +49,7 @@ clean:
 	-rm -f $(IMG)	
 	-rm -f kernel.elf
 	-rm -f test 
-	-rm -f tags
+#	-rm -f tags
 	-rm -f $(IMGHD) 
 	-rm -rf $(OBJDIR)
 $(IMGHD):	 

@@ -19,7 +19,7 @@ bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protec
 %define	DIV_ZERO	0x0
 %define TIMER		0x8
 %define KEYB		0x9
-%define CUSTOM		0x20
+%define CUSTOM		0x2c
 
 %define PIC1_DATA	0x21		; master programmable interrupt controller data port
 %define PIC1_CMD	0x20		;  - command port	
@@ -97,7 +97,7 @@ setup:
 
 	call 	setup_vga		; 	
 
-	sti				; enable interrupts
+	;sti				; enable interrupts
  	
 	call 	kmain			;_kmain			; call kernel main function
 
@@ -105,6 +105,7 @@ setup:
 					; at this point the value should be 0d (00000000 00001000) - 1 = index 8
 					; and 0 = GDT, 00 = priviledge level
 mainloop:
+	jmp	mainloop
 	hlt
 ; *******
 ; VGA
@@ -159,11 +160,11 @@ setup_pic:
 	out	PIC1_DATA, al		; write to both controllers
 	out	PIC2_DATA, al		;
 				
-	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
+	mov	al, 11111000b		; OCW1 interrupt mask = 11111101 
 					; only IRQ1 (keyboard) is allowed trough
 	out	PIC1_DATA, al		; write OCW1 to PIC1
 
-	mov	al, 11111111b		; OCW1 interrupt mask = 11111101 
+	mov	al, 11101111b		; OCW1 interrupt mask = 11111101 
 					; only IRQ12 (mouse) is allowed trough
 	out	PIC2_DATA, al		; 
 	ret
@@ -171,7 +172,7 @@ setup_pic:
 ; IDT: setup interrupt handlers in IDT
 ; *******
 setup_interrupts:	
-	lea	eax, [division_by_zero]
+	lea	eax, [isr_division_by_zero]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], ax
 	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0x8
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0
@@ -179,7 +180,7 @@ setup_interrupts:
 	rol	eax, 16
 	mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], ax
 	
-	lea	eax, [timer]
+	lea	eax, [isr_timer]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*TIMER)], ax
 	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*TIMER)], 0x8
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*TIMER)], 0
@@ -187,7 +188,7 @@ setup_interrupts:
 	rol	eax, 16
 	mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*TIMER)], ax
 
-	;lea	eax, [keyboard]
+	;lea	eax, [isr_keyboard]
 	;mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*KEYB)], ax
 	;mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*KEYB)], 0x8
 	;mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*KEYB)], 0
@@ -195,7 +196,7 @@ setup_interrupts:
 	;rol	eax, 16
 	;mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*KEYB)], ax
 	
-	lea	eax, [custom]
+	lea	eax, [isr_custom]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*CUSTOM)], ax
 	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0x8
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0
@@ -270,7 +271,7 @@ interrupt:
 ; ***************************
 ; division by zero handler
 ; ***************************
-division_by_zero:
+isr_division_by_zero:
 	;mov	esi,    text
 	;call	print
 	push	10
@@ -282,8 +283,9 @@ division_by_zero:
 ; ***************************
 ; timer - handles the clockinterrupts
 ; ***************************
-global timer:function
-timer:
+global isr_timer:function
+isr_timer:
+	cli
 	pushad
 	
 	xor 	eax, eax
@@ -292,14 +294,14 @@ timer:
 	mov 	eax, [ticks]
 	inc 	eax
 	mov	[ticks], eax	
-	mov	ebx, 0x02		; divide by 18 (18 times a second) 
+	mov	ebx, 0x12		; divide by 18 (18 times a second) 
 					; TODO: this leeds to inaccurate timing as PIT ticks at 18.2 times a second
 					; if used to represent time-ticks
 	div	ebx			; qoutient = eax, remainder = edx .. explain
 	cmp	edx, 0
 	jne	.end
 	mov	ebx, eax
-	push	0x33
+	push	0x30
 	call	_putchar
 	pop	eax
 
@@ -311,6 +313,8 @@ timer:
 .end:
 	mov	al, 0x20		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
+	mov	al, 0x20		; EOI value
+	out	PIC2_CMD, al		; send EOI to PIC1
 	popad
 	sti				; restore interrupts
 	iret
@@ -324,8 +328,8 @@ timer:
 ; *---------*                *---------*
 ; (Motherboard)              (keyboard)
 ; ****************************
-global keyboard:function
-keyboard: 				
+global isr_keyboard:function
+isr_keyboard: 				
 	cli
 	pushad
 
@@ -382,13 +386,14 @@ keyboard:
 	mov	al, 0x20		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
 	popad
-	sti		
+	sti				; restore interrupts		
 	iret
 ; *********************
 ; custom (test) isr - declared global, and can be used in other modules
 ; *********************
-global custom:function			
-custom: 
+global isr_custom:function			
+isr_custom: 
+	cli
 	push	eax
 	push	ebx
 	xor	eax, eax
@@ -402,7 +407,8 @@ custom:
 	mov	al, 0x20
 	out	PIC1_CMD, al		; send EOI
 	pop	ebx	
-	pop	eax	
+	pop	eax
+	sti				; restore interrupts	
 	iret
 ; *******
 ; data section
