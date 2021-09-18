@@ -42,6 +42,7 @@ extern print
 extern kprintf
 extern _putchar
 extern setup_ps2
+extern setup_interrupts
 
 global gdtr:data
 global gdt:data
@@ -89,15 +90,13 @@ setup:
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
 
+	call 	setup_interrupts	; setup interrupt service routines etc..
 	call 	setup_pic		; init of PIC (programmable interrupt controller)
-
 	call	setup_ps2		; setup the PS/2 controller
 	
-	;call 	setup_interrupts	; setup interrupt service routines etc..
-
 	call 	setup_vga		; 	
 
-	;sti				; enable interrupts
+	sti				; enable interrupts
  	
 	call 	kmain			;_kmain			; call kernel main function
 
@@ -135,43 +134,44 @@ setup_pic:
 	; NOTICE:
 	; at this point the PIC1 and PIC2 is NOT initialized properly. 
 	; The PIC's interrupts needs remapping to other IRQ indexes/addresses:
-	; ICWx -> Instruction Control Word, OCWx -> Operation Control Word
+	; ICWx -> Instruction Control Word
+	; OCWx -> Operation Control Word
 
 	mov	al, 00010001b		; IWC1: bit 1 => ICW4 is needed
 	out	PIC1_CMD, al		; send ICW1 to PIC1 (master)
 	out	PIC2_CMD, al		; send ICW1 to PIC2 (slave)
 
-	mov	al, 00100000b		; ICW2: sets start addr for interrupt vectors 0-7
+	mov	al, 00100000b		; ICW2: maps start addr for interrupt vectors 0-7
 					; All vectors from 0-31 have been reserved by Intel, so set to 0x20 (32) 
 	out	PIC1_DATA, al		; write the ICW2 to PIC1
 	
-	mov	al, 00101000b		; ICW2: sets start addr for interrupt vectors 8-15
+	mov	al, 00101000b		; ICW2: maps start addr for interrupt vectors 8-15
 					; Set to 0x28 (40) for slave
 	out	PIC2_DATA, al		; write ICW2 to PIC2
 	
-	mov	al, 00000100b		; ICW3: set int line 2 for connecting PIC1 to PIC2
+	mov	al, 00000100b		; ICW3: set interrupt line 2 for connecting slave to master
 	out	PIC1_DATA, al		; write ICW3 to PIC1
 
 	mov	al, 00000010b		; ICW3: set input line (from PIC1) to 2 in binary format (010 = 2)
-					; for PIC2
+					; for PIC2 (slave to master)
 	out	PIC2_DATA, al		; write ICW3 to pic2
 	
 	mov	al, 00000001b		; ICW4: bit 0 = 1 enables 80x86
 	out	PIC1_DATA, al		; write to both controllers
 	out	PIC2_DATA, al		;
 				
-	mov	al, 11111000b		; OCW1 interrupt mask = 11111101 
-					; only IRQ1 (keyboard) is allowed trough
+	mov	al, 11111000b		; OCW1 interrupt mask = 11111001 
+					; only IRQ1 (keyboard) and IRQ2 (slave pic) is allowed trough
 	out	PIC1_DATA, al		; write OCW1 to PIC1
 
-	mov	al, 11101111b		; OCW1 interrupt mask = 11111101 
+	mov	al, 11101111b		; OCW1 interrupt mask = 11101111 
 					; only IRQ12 (mouse) is allowed trough
 	out	PIC2_DATA, al		; 
 	ret
 ; *******
 ; IDT: setup interrupt handlers in IDT
 ; *******
-setup_interrupts:	
+setup_interrupts_internal:	
 	lea	eax, [isr_division_by_zero]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], ax
 	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0x8
@@ -265,7 +265,7 @@ section .isr
 global interrupt:function
 interrupt:
 	pushad
-	int	0x2C			;
+	int	0x2d			;
 	popad
 	ret
 ; ***************************
@@ -394,6 +394,8 @@ isr_keyboard:
 global isr_custom:function			
 isr_custom: 
 	cli
+	push	esp
+	mov	ebp, esp
 	push	eax
 	push	ebx
 	xor	eax, eax
@@ -408,6 +410,7 @@ isr_custom:
 	out	PIC1_CMD, al		; send EOI
 	pop	ebx	
 	pop	eax
+	pop	esp
 	sti				; restore interrupts	
 	iret
 ; *******
@@ -546,7 +549,7 @@ idt:
 		;db	10001110b
 		;db	0x0011
 
-		;times 256	db 0	; fill with 0 untill entry index 32
+		times 256	dd 0	; fill with 0 untill entry index 32
 		
 		; entry index 32(0x20):	
 		;dw	0x01dc		; offset B
