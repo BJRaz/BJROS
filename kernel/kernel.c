@@ -8,22 +8,24 @@
 #define i_pushall 	__asm__("pushal");
 #define i_popall	__asm__("popal");
 #define	i_return 	__asm__("leave;iret");
+#define i_cli		__asm__("cli");
+#define i_sti		__asm__("sti");
 #define halt		__asm__("hlt");
 
 #define IDT_SEGMENT	0x8
 #define IDT_FILL	0x0
-#define IDT_FLAGS	0x8e	// TODO: check this - aka 10001110b
+#define IDT_FLAGS	0x8e			// TODO: check this - aka 10001110b
 
 #define PIC1_DATA	0x21
 #define PIC1_CMD	0x20
 #define	PIC2_DATA	0xa1
 #define PIC2_CMD	0xa0
 
-#define PIC_EOI		0x20
+#define PIC_EOI		0x20			// End Of Interrupt value sent to PIC
 #define KBD_ARRAY_SIZE	128
 
-#define PS2_DATA	0x60		// i8042 ps/2 controller data port (r/w)
-#define PS2_CMD		0x64		// i8042 ps/2 status register (read), command register (write)
+#define PS2_DATA	0x60			// i8042 ps/2 controller data port (r/w)
+#define PS2_CMD		0x64			// i8042 ps/2 status register (read), command register (write)
 
 #define ISR_FUNC	__attribute__((__section__(".isr")))
 #define PACKED		__attribute__ ((__packed__)) 
@@ -41,9 +43,9 @@ private:
 
 extern "C" {
 #endif
-	extern uint32_t gdtr;
-	extern uint32_t idt;
-	extern uint32_t isr_custom;			// references a ISR implemented in nasm/multiboot.asm
+	extern uint32_t gdtr;			// references the global descriptor table register
+	extern uint32_t idt;			// references the interrupt descriptor table
+	extern uint32_t isr_custom;		// references a ISR implemented in nasm/multiboot.asm
 	extern uint32_t isr_keyboard;		// references a ISR implemented - 
 	extern uint32_t isr_timer;		// references a ISR
 	extern char kbdchar;
@@ -65,6 +67,22 @@ struct interrupt_gate_descriptor *idt_array;
 struct multiboot_info* mb_info;
 void* mv;
 
+// need the attribute packed, otherwise the alignment of short limit is 4 bytes
+// yielding a false value. When packed the alignment is 2 bytes  
+struct PACKED gdtr_register 
+{
+	uint16_t limit;
+	uint32_t baseaddress;
+};
+
+struct PACKED interrupt_gate_descriptor
+{
+	uint16_t offset_lo;
+	uint16_t segment_selector;
+	uint8_t fill;
+	uint8_t flags;
+	uint16_t offset_hi; 
+};
 
 void ps2_controller_send_command(uint8_t command)
 {
@@ -220,35 +238,18 @@ void setup_ps2()
 
 }
 
-// need the attribute packed, otherwise the alignment of short limit is 4 bytes
-// yielding a false value. When packed the alignment is 2 bytes  
-struct PACKED gdtr_register 
-{
-	uint16_t limit;
-	uint32_t baseaddress;
-};
 
-struct PACKED interrupt_gate_descriptor
-{
-	uint16_t offset_lo;
-	uint16_t segment_selector;
-	uint8_t fill;
-	uint8_t flags;
-	uint16_t offset_hi; 
-};
-
-/*
 // test ISR
-// interrupt 20H
-void ISR_FUNC isr()
+// interrupt 2dH
+void ISR_FUNC isr(uint32_t arg)
 {
 	// TODO: store all relevant regs in stack
 	// check stack segment etc.
 	//i_pushall;
 	//__asm__("mov $2, %eax");
 	//__asm__("mov %eax, %gs");	
-	__asm__("pushl %eax");
-	kprintf("ISR args %d, %d\n", 22, 24);
+	//__asm__("pushl %eax");
+	/*kprintf("ISR args %d, %d\n", 22, 24);
 	kprintf("her: %d, %d, %x\n", 1, 2, 16);
 	char scancode = inb(0x60);	
 	kprintf("scan: %x\n", scancode);
@@ -259,11 +260,18 @@ void ISR_FUNC isr()
 	// remember to send EOI to PIC if used as a hardware-interrupt routine.
 	//i_popall ; TODO: somehow this doesn't work when run in emulator (sets ebp = 0x2)
 	__asm__("popl %eax");
+	*/
+	i_cli;
+	uint32_t cs = arg;
+	uint32_t eip = *(&arg-1);
+	uint32_t eflags = *(&arg+1);
+	kprintf("Arg: CS, EIP and EFLAGS: 0x%x, 0x%x, 0x%x\n", cs, eip, eflags);
 	outb(PIC1_CMD, PIC_EOI);				// send EOI to PIC 1
-	//__asm__("hlt");
+	outb(PIC2_CMD, PIC_EOI);				// send EOI to PIC 1
+	i_sti;
 	i_return;
 }
-*/
+
 
 // called when division by zero occurs
 // type: exception, fault - thus stored eip 
@@ -272,7 +280,7 @@ void ISR_FUNC isr_div_by_zero()
 {
 	//i_pushall;
 	kprintf("DIV BY ZERO Exception - system halted...");
-	__asm__("hlt");
+	halt;
 	//i_popall;
 	i_return;
 }
@@ -280,13 +288,13 @@ void ISR_FUNC isr_div_by_zero()
 // mouse interrupt
 void ISR_FUNC isr_mouse()
 {
-	__asm__("cli");
+	i_cli;
 	kprintf("Reads data\n");
 	uint8_t response = ps2_controller_read_data(); 
 	kprintf("mouse... 0x%x\n", response);
 	outb(PIC1_CMD, PIC_EOI);
 	outb(PIC2_CMD, PIC_EOI);
-	__asm__("sti");
+	i_sti;
 	i_return;
 }
 
@@ -297,6 +305,23 @@ void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t i
 	idt_entry->fill = IDT_FILL;
 	idt_entry->flags = IDT_FLAGS;
 	idt_entry->offset_hi = (uint16_t)(isr_address >> 16) & 0xFFFF; 
+}
+
+void setup_interrupts() 
+{
+	// IDT stuff
+		
+	idt_array = (struct interrupt_gate_descriptor*) &idt;
+	set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
+	
+	idt_array += 32;	
+	
+	set_isr_entry(idt_array, (uint32_t)&isr_timer); 		// slot 32 (0) - system timer
+	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);		// slot 33 (1) - keyboard PS/2
+	//set_isr_entry(idt_array + 8, (uint32_t)&timer);		// RTC (8) Real time clock
+	set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse);		// slot (12) - mouse PS/2
+	set_isr_entry(idt_array + 13, (uint32_t)&isr);		// slot (12) - mouse PS/2
+	
 }
 
 void showidtinfo(const struct interrupt_gate_descriptor* idt_array) 
@@ -324,20 +349,6 @@ int sysinfo()
 		mb_info->mem_lower, 
 		mb_info->mem_upper);
 	kprintf("multiboot magic header %x\n", mv);
-
-
-
-	// debug clutter
-/*	kprintf("Kernel test output from kprintf '-190000000': %d\n", -190000000);
-	kprintf(" -  string 'Brian': %s\n", "Brian");
-	kprintf(" -  string 'Brian' and number '200': %s, %d\n", "Brian", 200);
-	_utoa(4000000000, buffer);
-	kprintf(" -  '4000000000': %s\n", buffer);
-
-	kprintf("Unsigned converstion atou('4000000000')': %u\n", 4000000000);
-
-	kprintln(buffer);
-*/
 
 #ifdef __cplusplus
 	Sysinfo s;	// = new Sysinfo();
@@ -418,36 +429,23 @@ void prompt(void (*readbuf)(char*)) {
 				}
 			} 
 		} while(c != '\n'); 
-		(*readbuf)(buf);	// call the callback function
+		(*readbuf)(buf);		// call the callback function
 	}
 }
 
 char _getchar(void) {
-	while(kbdchar==0); // TODO: busy wait - refactor! 	
+	while(kbdchar==0); 			// TODO: busy wait - refactor! 	
 	char result = kbdchar;
 	kbdchar = 0;
 	return result;
 }
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 	int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) {
 		mb_info = multiboot_structure;
 		mv = magicvalue;
-
-		// IDT stuff
-		
-		idt_array = (struct interrupt_gate_descriptor*) &idt;
-		set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
-		
-		idt_array += 32;	
-		
-		set_isr_entry(idt_array, (uint32_t)&isr_timer); 			// slot 32 (0) - system timer
-		set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);		// slot 33 (1) - keyboard PS/2
-		//set_isr_entry(idt_array + 8, (uint32_t)&timer);			// RTC (8) Real time clock
-		set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse);		// slot (12) - mouse PS/2
-		
-		__asm__("sti");							// enable interrupts	
 		
 		prompt(callback);
 		
