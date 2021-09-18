@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 
 	prompt(callback);
 
-	char* text1 = "Brian tester: 0x%d, 0x%d hest\n";
+	char* text1 = "Brian tester: 0x%x, 0x%x hest\n";
 	_kprintf(text1, &st1, &st1);
 	char* arg1 = 0;
 
