@@ -28,8 +28,10 @@ void _clear()
 	video = (unsigned char*)VIDEO;
 	for(int i=0;i<VIDEO_X * VIDEO_Y * 2;i++)
 	{
-		video[i] = 0;
+		video[i++] = 0;
+		video[i] = ATTRIBUTE;
 	}
+	vx = vy = 0;
 }
 
 void _putchar(char c) 

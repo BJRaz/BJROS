@@ -30,6 +30,8 @@
 #define ISR_FUNC	__attribute__((__section__(".isr")))
 #define PACKED		__attribute__ ((__packed__)) 
 
+#define BUFFERLEN	255			// input buffer length
+
 #ifdef __cplusplus 
 
 class Sysinfo
@@ -55,10 +57,13 @@ extern "C" {
 	extern uint8_t inb(uint8_t reg);		// get byte from memory register reg
 	extern void outb(uint8_t reg, uint8_t byte);	// write byte to memory register reg
 	extern void interrupt();
+	extern void setcursor(uint32_t x, uint32_t y);	// sets cursor on screen
+	extern uint32_t vx, vy;				// 
 	
 	void prompt(void (*)(char*));
 	void callback(char*);
 	void test();
+	void help();
 #ifdef __cplusplus
 }
 #endif
@@ -399,37 +404,61 @@ void callback(char* buf)
 		sysinfo();
 	if(_strcmp("clear", buf) == 0)
 		_clear();
+	if(_strcmp("help", buf) == 0)
+		help();
 	else
 		kprintf("Buffer: %s\n", buf);
 }
 
+void help() 
+{
+	kprintln("int - calls software interrupt");
+	kprintln("test - test program");
+	kprintln("sysinfo - show system info");
+	kprintln("clear - clears screen");
+	kprintln("help - this help..");
+}
+
+/*
+ *	TODO: check for buffer overflow
+ * */
 void prompt(void (*readbuf)(char*)) {
-	char buf[255];
+	unsigned char buf[BUFFERLEN];
+	char *pmt = "> ";
+	int len = _strlen(pmt);
 	while(1) {
-		_memset(buf, 0, 255);
-		kprintf("> ");
+		_memset(buf, 0, BUFFERLEN);
+		
+		kprintf(pmt);
+		setcursor(vx, vy);
 		uint8_t idx = 0;
 		char c = 0;
 		do
 		{ 
-			if(idx == 255)
+			if(idx == BUFFERLEN)
 				break;
 			c = _getchar();
 			if(c != 0) {
 				switch(c) {
-					case 0x08:	//backspace char
-						_putchar(c);	
+					case 0x08:			// backspace char
+						if(vx > len)		// TODO: refactor
+						{
+							_putchar(c);
+							buf[--idx] = 0;	// remove char from buffer	
+						}
 						break;
-					case 0x0a:	// linefeed
+					case 0x0a:			// linefeed
 						_putchar(c);
 						break;
-					default:
+					default:			// prints the actual character to screen and puts it in buffer
 						_putchar(c);
 						buf[idx++] = c;
 				}
-			} 
+			}
+		       	if(vx > len)					// TODO: refactor	
+				setcursor(vx, vy);
 		} while(c != '\n'); 
-		(*readbuf)(buf);		// call the callback function
+		(*readbuf)(buf);					// call the callback function
 	}
 }
 
@@ -446,7 +475,7 @@ extern "C" {
 	int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) {
 		mb_info = multiboot_structure;
 		mv = magicvalue;
-		
+		_clear();		
 		prompt(callback);
 		
 		return 0;	

@@ -113,6 +113,22 @@ setup_vga:
 	mov	word [cursor.y], 8	; initialization of variables
 	mov	word [cursor.x], 0	; consider make them global
 	ret
+global setcursor:function
+setcursor
+	push 	ebp
+	mov 	ebp, esp
+	push	eax
+	push	ebx
+	
+	mov	word bx, [ebp+8]
+	mov	word ax, [ebp+12]
+	call 	cursor
+
+	pop	ebx
+	pop	eax
+	mov	esp, ebp
+	pop	ebp
+	ret
 
 global _scrollup:function
 _scrollup:	
@@ -298,12 +314,12 @@ isr_timer:
 					; TODO: this leeds to inaccurate timing as PIT ticks at 18.2 times a second
 					; if used to represent time-ticks
 	div	ebx			; qoutient = eax, remainder = edx .. explain
-	cmp	edx, 0
-	jne	.end
-	mov	ebx, eax
-	push	0x30
-	call	_putchar
-	pop	eax
+	;cmp	edx, 0
+	;jne	.end
+	;mov	ebx, eax
+	;push	0x30
+	;call	_putchar
+	;pop	eax
 
 ;	push	word [ticks]
 ;	push	numbertxt
