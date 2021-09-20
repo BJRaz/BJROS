@@ -231,8 +231,26 @@ void setup_ps2()
 	ps2_controller_write_data(0xF4);	// enable data reporting - mouse wont work until this is set
 	ps2_response = ps2_controller_read_data();
 	kprintf("Ps2 command status: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
+/*
+ * This should disable keyboard, and return the keyboards IDENTIFICATION byte(s)
+ * does not work as of sept. 20 2021.
+ * TODO: make it work 
+ *
+ *
+	ps2_controller_send_command(0xF5);
+	ps2_response = ps2_controller_read_data();
+	if(ps2_response == 0xFA) 
+	{
+		ps2_controller_send_command(0xF2);	// identify command
+		if((ps2_response = ps2_controller_read_data()) == 0xFA) {
+			ps2_response = ps2_controller_read_data();
+			kprintf("IDENT: 0x%x\n", ps2_response);
+		} else
+			kprintf("Returned: 0x%x\n", ps2_response);
 
-
+	} else
+			kprintf("Returned: 0x%x\n", ps2_response);
+*/
 	return;	
 		
 
