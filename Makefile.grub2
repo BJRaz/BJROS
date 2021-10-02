@@ -8,21 +8,22 @@ OUTPUTHD=/media/sf_VBoxLinuxShare/binaries/hdd.img
 IMGHD=hdd.img
 LODEVHD=/dev/mapper/loop0p1
 LODEV=/dev/loop0
+GRUBFLAGS=--target=i386-pc --locales=en@piglatin --fonts=ascii --install-modules="multiboot normal part_msdos ext2" --modules="multiboot normal part_msdos ext2" 
 
 $(IMGHD):	 
 	dd if=/dev/zero of=$(IMGHD) bs=1024 count=30000			# makes a hdd image of size 30MB
 	parted $(IMGHD) mklabel msdos mkpart primary 1 30 set 1 boot on # check for 1 10 in start, end for mkpart !
 grubhd:	$(IMGHD) $(GRUBFILEHD) kernel.elf
-	kpartx -a $(IMGHD)						# assign partition(s) to loopback-device (dev/mapper/loop0p1)
+	kpartx -av $(IMGHD)						# assign partition(s) to loopback-device (dev/mapper/loop0p1)
 	mkfs.ext2 -v $(LODEVHD)						# make filesystem on partition
 	mount $(LODEVHD) $(MOUNTPOINT)					# mount partition 
 	mkdir -p $(MOUNTPOINT)/boot					# make grub dirs and copy files
 	cp kernel.elf $(MOUNTPOINT)/
 	-cp assets/kernel.bin.old $(MOUNTPOINT)/
-	grub2-install --target=i386-pc --modules="multiboot normal part_msdos ext2" --boot-directory=$(MOUNTPOINT)/boot $(LODEV) 
+	grub2-install $(GRUBFLAGS) --boot-directory=$(MOUNTPOINT)/boot $(LODEV) 
 	cp grub.cfg $(MOUNTPOINT)/boot/grub2/
 	umount $(MOUNTPOINT)						# umount partition 
-	kpartx -d $(IMGHD)						# release loopback-device
+	kpartx -dv $(IMGHD)						# release loopback-device
 	sync
 installhd: grubhd
 	cp $(IMGHD) $(OUTPUTHD)	
