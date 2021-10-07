@@ -116,39 +116,43 @@ void setup_ps2()
 	// STEP 3-4: disable devices and read result
 	// send RESET to kbd device
 	ps2_controller_write_data(0xFF);
-	kprintf("Data written\n");
+	kprintf("Reset kbd written\n");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read acknowledge
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read response AA (passed)
 
 	// send RESET to mouse device
 	ps2_controller_send_command(0xD4);
 	ps2_controller_write_data(0xFF);
-	kprintf("Data written\n");
+	kprintf("Reset mouse written\n");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read ack
+	ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 response: 0x%x\n", ps2_response); 	// read response AA
 
 	// disable first PS2 port (kbd)
 	ps2_controller_send_command(0xAD);
-	kprintf("Command sendt\n");
-	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+	kprintf("Disable kbd PS2 port 1 sent\n");
+	/*ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 response: 0x%x\n", ps2_response);*/
 
 	// disable second PS2 port (mouse)
 	ps2_controller_send_command(0xA7);
-	kprintf("Command sendt\n");
-	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+	kprintf("Disable mouse PS2 port 2\n");
+	/*ps2_response = ps2_controller_read_data();
+	kprintf("Ps2 response: 0x%x\n", ps2_response);*/
 	
 	// STEP 5: Get and set configuration byte 
 	ps2_controller_send_command(0x20);
-	kprintf("Command sendt\n");
+	kprintf("Configuration byte sent\n");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 present status: 0x%x\n", ps2_response);
+	kprintf("Ps2 config. byte: 0x%x\n", ps2_response);
 	
 	kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
 	ps2_response &= 0b1011100;		// clear bits 0,1 and 6
 
-	kprintf("Ps2 changed configuration byte: 0x%x\n", ps2_response);
+	kprintf("Ps2 changed configuration byte to: 0x%x\n", ps2_response);
 	ps2_controller_send_command(0x60);
 	ps2_controller_write_data(ps2_response);
 	
@@ -179,7 +183,7 @@ void setup_ps2()
 	//ps2_response = ps2_controller_read_data();
 	//kprintf("Ps2 second port enable status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
 	ps2_controller_send_command(0x20);
-	kprintf("Command sendt\n");
+	kprintf("Command sendt 0x20\n");
 	ps2_response = ps2_controller_read_data();
 	kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
 	ps2_response |= 0b0100011;		// enable bits 0,1 and 6
