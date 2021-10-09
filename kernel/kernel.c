@@ -119,23 +119,6 @@ void setup_ps2()
 	// At the moment, if its not present the system may fail
 
 	// STEP 3-4: disable devices and read result
-	// send RESET to kbd device
-	ps2_controller_write_data(0xFF);
-	kprintf("Reset kbd written\n");
-	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read acknowledge
-	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read response AA (passed)
-
-	// send RESET to mouse device
-	ps2_controller_send_command(0xD4);
-	ps2_controller_write_data(0xFF);
-	kprintf("Reset mouse written\n");
-	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read ack
-	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 response: 0x%x\n", ps2_response); 	// read response AA
-
 	// disable first PS2 port (kbd)
 	ps2_controller_send_command(0xAD);
 	kprintf("Disable kbd PS2 port 1 sent\n");
@@ -150,11 +133,10 @@ void setup_ps2()
 	
 	// STEP 5: Get and set configuration byte 
 	ps2_controller_send_command(0x20);
-	kprintf("Configuration byte sent\n");
+	kprintf("Command read config. byte\n");
 	ps2_response = ps2_controller_read_data();
 	kprintf("Ps2 config. byte: 0x%x\n", ps2_response);
 	
-	kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
 	ps2_response &= 0b1011100;		// clear bits 0,1 and 6
 
 	kprintf("Ps2 changed configuration byte to: 0x%x\n", ps2_response);
@@ -165,60 +147,55 @@ void setup_ps2()
 	ps2_controller_send_command(0xAA);
 	kprintf("Command sendt (self test)\n");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 self test status: 0x%x\n", ps2_response);
+	kprintf("Ps2 self test status: 0x%x - %s\n", ps2_response, (ps2_response == 0x55) ? "OK": "NOK OK");
 
 	// STEP 7: (optional)
 	// STEP 8: first and second port status test 
 	ps2_controller_send_command(0xAB);
-	kprintf("Command sendt (1 port status test)\n");
+	kprintf("Command 1 port status test\n");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 first port test status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+	kprintf("Ps2 first port status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
 	ps2_controller_send_command(0xA9);
-	kprintf("Command sendt (2 port status test)\n");
+	kprintf("Command 2 port status test)\n");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 second port test status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+	kprintf("Ps2 second port status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
 
 	// STEP 9: enable ports 1 and 2
 	ps2_controller_send_command(0xAE);
-	kprintf("Command sendt (1 port enable)\n");
-	//ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 first port enable status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+	kprintf("Command 1 port enable)\n");
 	ps2_controller_send_command(0xA8);
-	kprintf("Command sendt (2 port enable)\n");
-	//ps2_response = ps2_controller_read_data();
-	//kprintf("Ps2 second port enable status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+	kprintf("Command 2 port enable\n");
 	ps2_controller_send_command(0x20);
-	kprintf("Command sendt 0x20\n");
+	kprintf("Command read config. byte\n");
 	ps2_response = ps2_controller_read_data();
 	kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
 	ps2_response |= 0b0100011;		// enable bits 0,1 and 6
 
+	// write back new config. byte
+	kprintf("Ps2 changed configuration byte to: 0x%x\n", ps2_response);
 	ps2_controller_send_command(0x60);
 	ps2_controller_write_data(ps2_response);
-
-	//ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 changed configuration byte: 0x%x\n", ps2_response);
 	
 	// STEP 10: reset devices
-	
-	ps2_controller_send_command(0xD1);
-	ps2_controller_write_data(0xFF);	// KDB RESET AND START SELF TEST -  responds: AA = OK, FE = Resend, FC/FD = Self test failed 
-
+	//ps2_controller_send_command(0xD1);		// maybe, maybe not..
+	ps2_controller_write_data(0xFF);
+	kprintf("Command reset kbd written\n");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 keyboard reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK");
-
-	ps2_controller_send_command(0xD4);	// Tell controller to access the mouse
-	ps2_controller_write_data(0xFF);	// MOUSE RESET AND START SELF TEST
-
+	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read acknowledge
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 mouse reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xfa) ? "OK" : "NOT OK");
+	kprintf("Ps2 response: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK");	// read response AA (passed)
 
+	// send RESET to mouse device
+	ps2_controller_send_command(0xD4);
+	ps2_controller_write_data(0xFF);
+	kprintf("Command reset mouse written\n");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 mouse reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK");
-	
+	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read ack
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 mouse reset status: 0x%x - %s\n", ps2_response, (ps2_response == 0x0) ? "OK" : "NOT OK");
+	kprintf("Ps2 response: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK"); 	// read response AA
+
 /*	
+
 	ps2_controller_send_command(0xD4);	// get mouse info
 	ps2_controller_write_data(0xE9);
 	ps2_response = ps2_controller_read_data();
@@ -428,8 +405,8 @@ void callback(char* buf)
 		_clear();
 	if(_strcmp("help", buf) == 0)
 		help();
-	else
-		kprintf("Buffer: %s\n", buf);
+	else if(_strlen(buf) > 0)
+		kprintf("Command not found: %s\n", buf);
 }
 
 void help() 
@@ -445,8 +422,8 @@ void help()
  *	TODO: check for buffer overflow
  * */
 void prompt(void (*readbuf)(char*)) {
-	unsigned char buf[BUFFERLEN];
-	char *pmt = "> ";
+	char buf[BUFFERLEN];
+	char *pmt = "BJROS> ";
 	int len = _strlen(pmt);
 	while(1) {
 		_memset(buf, 0, BUFFERLEN);
@@ -477,7 +454,7 @@ void prompt(void (*readbuf)(char*)) {
 						buf[idx++] = c;
 				}
 			}
-		       	if(vx > len)					// TODO: refactor	
+		       	if(vx >= len)					// TODO: refactor	
 				setcursor(vx, vy);
 		} while(c != '\n'); 
 		(*readbuf)(buf);					// call the callback function

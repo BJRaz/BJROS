@@ -73,7 +73,7 @@ multiboot_entry:
 	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
 	lidt	[idtr]			; load interrupt descriptor table register with 6 byte memory value
 	
-	jmp	0x8:setup
+	jmp	0x8:setup		; sets CS (code segment) to 0x8
 setup:
 	mov	cx, 0x10
 	mov	ds, cx
@@ -84,7 +84,8 @@ setup:
 
 
 	
-	mov	esp, 0x7c00
+	mov	esp, 0x7c00		; TODO:  stack starts at 0x7c00, will grow downwards 
+					; and use conventional mem (about 30 kiB) - change address to higher mem area
 	mov	ebp, esp 	
 	
 	push	eax			; contains magic value (magic number)
