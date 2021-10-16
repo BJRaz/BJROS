@@ -318,13 +318,13 @@ void setup_interrupts()
 	idt_array = (struct interrupt_gate_descriptor*) &idt;
 	set_isr_entry(idt_array, (uint32_t)&isr_div_by_zero);
 	
-	idt_array += 32;	
+	idt_array += 32;						// get pass the first 32 entries which is reserved intel/cpu	
 	
-	set_isr_entry(idt_array, (uint32_t)&isr_timer); 		// slot 32 (0) - system timer
-	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);		// slot 33 (1) - keyboard PS/2
-	//set_isr_entry(idt_array + 8, (uint32_t)&timer);		// RTC (8) Real time clock
+	set_isr_entry(idt_array, (uint32_t)&isr_timer); 		// slot (0) - system timer
+	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);		// slot (1) - keyboard PS/2
+	//set_isr_entry(idt_array + 8, (uint32_t)&timer);		// slot (8) - Real time clock
 	set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse);		// slot (12) - mouse PS/2
-	set_isr_entry(idt_array + 13, (uint32_t)&isr);		// slot (12) - mouse PS/2
+	set_isr_entry(idt_array + 13, (uint32_t)&isr);			// slot (13) - custom ISR for software INT test
 	
 }
 
@@ -339,13 +339,7 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 }
 int sysinfo() 
 {
-
-	char* tal = "842";
 	int len = 0;
-	int result = _atoi(tal);
-	char buffer[20];
-
-	_itoa(result, buffer);
 	kprintf("****** BJROS ******\n");
 	char* text = "Welcome to BJROS ...\n";
 	len = kprint(text);
@@ -365,7 +359,7 @@ int sysinfo()
 	
 	kprintf("Interrupt gate descriptor baseaddress: 0x%x, %d\n", &idt, &idt);
 	
-	//kprintf("ISR address: 0x%x\n", &isr);
+	kprintf("ISR test (INT 45) address: 0x%x\n", &isr);
 	kprintf("ISR address div by zero: 0x%x\n", &isr_div_by_zero);
 
 
@@ -396,16 +390,26 @@ void test()
 void callback(char* buf) 
 {
 	if(_strcmp("int", buf) == 0)
-		interrupt();
+	{
+		interrupt();return;
+	}
 	if(_strcmp("test", buf) == 0)
-		test();
+	{	
+		test();return;
+	}
 	if(_strcmp("sysinfo", buf) == 0)
-		sysinfo();
+	{	
+		sysinfo();return;
+	}
 	if(_strcmp("clear", buf) == 0)
-		_clear();
+	{
+		_clear();return;
+	}
 	if(_strcmp("help", buf) == 0)
-		help();
-	else if(_strlen(buf) > 0)
+	{	
+		help();return;
+	}
+	if(_strlen(buf) > 0)
 		kprintf("Command not found: %s\n", buf);
 }
 
@@ -462,7 +466,7 @@ void prompt(void (*readbuf)(char*)) {
 }
 
 char _getchar(void) {
-	while(kbdchar==0); 			// TODO: busy wait - refactor! 	
+	while(kbdchar==0); 						// TODO: busy wait - refactor! 	
 	char result = kbdchar;
 	kbdchar = 0;
 	return result;
@@ -471,7 +475,8 @@ char _getchar(void) {
 #ifdef __cplusplus
 extern "C" {
 #endif
-	int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) {
+	int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) 
+	{
 		mb_info = multiboot_structure;
 		mv = magicvalue;
 		_clear();		
