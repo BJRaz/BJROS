@@ -13,7 +13,7 @@ AS=nasm
 ASFLAGS=-felf32 -Fdwarf   
 LODEV=/dev/loop0
 OBJDIR:=bin
-OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o string.so kernel.o) 
+OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o console.o string.so kernel.o) 
 # settings floppy
 GRUBFILE=grub_legacy/setup_grub.txt
 OUTPUT=/media/sf_VBoxLinuxShare/binaries/floppy.img	# TODO path remove etc...

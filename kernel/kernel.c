@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <multiboot.h>
+#include <console.h>
+
 #define i_pushall 	__asm__("pushal");
 #define i_popall	__asm__("popal");
 #define	i_return 	__asm__("leave;iret");
@@ -22,15 +24,12 @@
 #define PIC2_CMD	0xa0
 
 #define PIC_EOI		0x20			// End Of Interrupt value sent to PIC
-#define KBD_ARRAY_SIZE	128
 
 #define PS2_DATA	0x60			// i8042 ps/2 controller data port (r/w)
 #define PS2_CMD		0x64			// i8042 ps/2 status register (read), command register (write)
 
 #define ISR_FUNC	__attribute__((__section__(".isr")))
 #define PACKED		__attribute__ ((__packed__)) 
-
-#define BUFFERLEN	255			// input buffer length
 
 #ifdef __cplusplus 
 
@@ -50,20 +49,15 @@ extern "C" {
 	extern uint32_t isr_custom;		// references a ISR implemented in nasm/multiboot.asm
 	extern uint32_t isr_keyboard;		// references a ISR implemented - 
 	extern uint32_t isr_timer;		// references a ISR
-	extern char kbdchar;
-	extern char kbdarray[KBD_ARRAY_SIZE];
-	extern char kbdarray_upper[KBD_ARRAY_SIZE];	
 	
 	extern uint8_t inb(uint8_t reg);		// get byte from memory register reg
 	extern void outb(uint8_t reg, uint8_t byte);	// write byte to memory register reg
 	extern void interrupt();
-	extern void setcursor(uint32_t x, uint32_t y);	// sets cursor on screen
-	extern uint32_t vx, vy;				// 
 	
-	void prompt(void (*)(char*));
 	void callback(char*);
 	void test();
 	void help();
+	void recursive(int i);
 #ifdef __cplusplus
 }
 #endif
@@ -293,7 +287,7 @@ void ISR_FUNC isr_div_by_zero()
 void ISR_FUNC isr_mouse()
 {
 	i_cli;
-	kprintf("Reads data\n");
+	kprintf("Reads mousedata\n");
 	uint8_t response = ps2_controller_read_data(); 
 	kprintf("mouse... 0x%x\n", response);
 	outb(PIC1_CMD, PIC_EOI);
@@ -337,12 +331,16 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 	kprintf("IDT flags: 0x%x\n", idt_array->flags);
 	kprintf("IDT offset_hi: 0x%x\n", idt_array->offset_hi);
 }
+
 int sysinfo() 
 {
 	int len = 0;
 	kprintf("****** BJROS ******\n");
 	char* text = "Welcome to BJROS ...\n";
 	len = kprint(text);
+	kprintf("multiboot info address: 0x%x\n", &mb_info); 
+	kprintf("multiboot info cmdline: %s\n", 
+		mb_info->cmdline);
 	kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
 		mb_info->mem_lower, 
 		mb_info->mem_upper);
@@ -389,6 +387,10 @@ void test()
 
 void callback(char* buf) 
 {
+	if(_strcmp("recursive", buf) == 0)
+	{
+		recursive(1);return;
+	}
 	if(_strcmp("int", buf) == 0)
 	{
 		interrupt();return;
@@ -422,54 +424,10 @@ void help()
 	kprintln("help - this help..");
 }
 
-/*
- *	TODO: check for buffer overflow
- * */
-void prompt(void (*readbuf)(char*)) {
-	char buf[BUFFERLEN];
-	char *pmt = "BJROS> ";
-	int len = _strlen(pmt);
-	while(1) {
-		_memset(buf, 0, BUFFERLEN);
-		
-		kprintf(pmt);
-		setcursor(vx, vy);
-		uint8_t idx = 0;
-		char c = 0;
-		do
-		{ 
-			if(idx == BUFFERLEN)
-				break;
-			c = _getchar();
-			if(c != 0) {
-				switch(c) {
-					case 0x08:			// backspace char
-						if(vx > len)		// TODO: refactor
-						{
-							_putchar(c);
-							buf[--idx] = 0;	// remove char from buffer	
-						}
-						break;
-					case 0x0a:			// linefeed
-						_putchar(c);
-						break;
-					default:			// prints the actual character to screen and puts it in buffer
-						_putchar(c);
-						buf[idx++] = c;
-				}
-			}
-		       	if(vx >= len)					// TODO: refactor	
-				setcursor(vx, vy);
-		} while(c != '\n'); 
-		(*readbuf)(buf);					// call the callback function
-	}
-}
-
-char _getchar(void) {
-	while(kbdchar==0); 						// TODO: busy wait - refactor! 	
-	char result = kbdchar;
-	kbdchar = 0;
-	return result;
+void recursive(int i) 
+{
+	kprintf("tal: %d\n", i++);
+	recursive(i);
 }
 
 #ifdef __cplusplus
