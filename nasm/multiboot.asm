@@ -19,23 +19,30 @@ bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protec
 %define	DIV_ZERO	0x0
 %define TIMER		0x8
 %define KEYB		0x9
-%define CUSTOM		0x20
+%define CUSTOM		0x2c
 
 %define PIC1_DATA	0x21		; master programmable interrupt controller data port
 %define PIC1_CMD	0x20		;  - command port	
 %define PIC2_DATA	0xa1
 %define PIC2_CMD	0xa0
 
+%define PS2_DATA	0x60		; i8042 ps/2 controller data port (r/w)
+%define PS2_CMD		0x64		; i8042 ps/2 status register (read), command register (write)
+
+
 %define STACK_SIZE	0x4000
 %define	VIDEO		0xb8000		; VIDEO address for text color mode
 %define VGA_ROWS	25
 %define	VGA_COLS	80
 %define VGA_BYTES_ROW	160		; in vga text mode 3 - 80x25 16 colors uses 2 bytes mem pr character
+
 extern kmain				; kmail is kernel main function ing if binary format.
 extern cursor
 extern print
 extern kprintf
 extern _putchar
+extern setup_ps2
+extern setup_interrupts
 
 global gdtr:data
 global gdt:data
@@ -49,7 +56,7 @@ global _start
 _start:
 
 	jmp	multiboot_entry
-	align 4				; 32 bit aligned	
+	align 	4			; 32 bit aligned	
 multiboot_header:
 	dd	MB_HEADER_MAGIC		; magic number
 	dd	MB_HEADER_FLAGS		; flags
@@ -61,12 +68,12 @@ multiboot_header:
 	dd	multiboot_entry		; entry addr.
 multiboot_entry:
 	
-	cli
+	cli				; disable interrupts
 
 	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
 	lidt	[idtr]			; load interrupt descriptor table register with 6 byte memory value
 	
-	jmp	0x8:setup
+	jmp	0x8:setup		; sets CS (code segment) to 0x8
 setup:
 	mov	cx, 0x10
 	mov	ds, cx
@@ -77,19 +84,18 @@ setup:
 
 
 	
-	mov	esp, 0x7c00
+	mov	esp, 0x7c00		; TODO:  stack starts at 0x7c00, will grow downwards 
+					; and use conventional mem (about 30 kiB) - change address to higher mem area
 	mov	ebp, esp 	
 	
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
-	; TODO - needs to be done to initialize keyboard/mouse etc.
-	; call	setup_ps2		; setup PS/2 controller (i8042)	
-	call 	setup_pic		; init of PIC (programmable interrupt controller)
-	;call 	setup_interrupts	; setup interrupt service routines etc..
-	
 
-	mov	word [cursor.y], 8	; initialization of variables
-	mov	word [cursor.x], 0	; consider make them global
+	call 	setup_interrupts	; setup interrupt service routines etc..
+	call 	setup_pic		; init of PIC (programmable interrupt controller)
+	call	setup_ps2		; setup the PS/2 controller
+	
+	call 	setup_vga		; 	
 
 	sti				; enable interrupts
  	
@@ -99,13 +105,32 @@ setup:
 					; at this point the value should be 0d (00000000 00001000) - 1 = index 8
 					; and 0 = GDT, 00 = priviledge level
 mainloop:
-	; TODO: busyloopw - uses 100% cpu .. fix somehow
-;	jmp	mainloop
-;	int	0x20
+	jmp	mainloop
 	hlt
 ; *******
 ; VGA
 ; *******
+setup_vga:
+	mov	word [cursor.y], 8	; initialization of variables
+	mov	word [cursor.x], 0	; consider make them global
+	ret
+global setcursor:function
+setcursor
+	push 	ebp
+	mov 	ebp, esp
+	push	eax
+	push	ebx
+	
+	mov	word bx, [ebp+8]
+	mov	word ax, [ebp+12]
+	call 	cursor
+
+	pop	ebx
+	pop	eax
+	mov	esp, ebp
+	pop	ebp
+	ret
+
 global _scrollup:function
 _scrollup:	
 	pushad
@@ -113,23 +138,11 @@ _scrollup:
 	mov	edi, VIDEO
 	mov	ecx, VGA_BYTES_ROW*VGA_ROWS		; count 160x25 bytes
 	rep	movsb	
-	; clear last line
-	mov	edi, VIDEO+VGA_COLS*2*(VGA_ROWS-1)	;
-	mov	eax, 0 
+	mov	edi, VIDEO+VGA_COLS*2*(VGA_ROWS-1)	; clear last line
+	mov	ax, 0x0700
 	mov	ecx, VGA_BYTES_ROW
-	rep 	stosb
+	rep 	stosw
 	popad
-	ret
-; *******
-;
-; *******
-setup_ps2:
-	mov	al, 0x20
-	out	0x64, al			; 0x20 read status 0 byte
-		
-	in	al, 0x64
-	hlt
-
 	ret
 ; *******
 ; PIC: setup programmable interrupt controller
@@ -138,44 +151,45 @@ setup_pic:
 	; NOTICE:
 	; at this point the PIC1 and PIC2 is NOT initialized properly. 
 	; The PIC's interrupts needs remapping to other IRQ indexes/addresses:
-	; ICWx -> Instruction Control Word, OCWx -> Operation Control Word
+	; ICWx -> Instruction Control Word
+	; OCWx -> Operation Control Word
 
 	mov	al, 00010001b		; IWC1: bit 1 => ICW4 is needed
 	out	PIC1_CMD, al		; send ICW1 to PIC1 (master)
 	out	PIC2_CMD, al		; send ICW1 to PIC2 (slave)
 
-	mov	al, 00100000b		; ICW2: sets start addr for interrupt vectors 0-7
+	mov	al, 00100000b		; ICW2: maps start addr for interrupt vectors 0-7
 					; All vectors from 0-31 have been reserved by Intel, so set to 0x20 (32) 
 	out	PIC1_DATA, al		; write the ICW2 to PIC1
 	
-	mov	al, 00101000b		; ICW2: sets start addr for interrupt vectors 8-15
+	mov	al, 00101000b		; ICW2: maps start addr for interrupt vectors 8-15
 					; Set to 0x28 (40) for slave
 	out	PIC2_DATA, al		; write ICW2 to PIC2
 	
-	mov	al, 00000100b		; ICW3: set int line 2 for connecting PIC1 to PIC2
+	mov	al, 00000100b		; ICW3: set interrupt line 2 for connecting slave to master
 	out	PIC1_DATA, al		; write ICW3 to PIC1
 
 	mov	al, 00000010b		; ICW3: set input line (from PIC1) to 2 in binary format (010 = 2)
-					; for PIC2
+					; for PIC2 (slave to master)
 	out	PIC2_DATA, al		; write ICW3 to pic2
 	
 	mov	al, 00000001b		; ICW4: bit 0 = 1 enables 80x86
 	out	PIC1_DATA, al		; write to both controllers
 	out	PIC2_DATA, al		;
 				
-	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
-					; only IRQ1 (keyboard) is allowed trough
+	mov	al, 11111000b		; OCW1 interrupt mask = 11111001 
+					; only IRQ1 (keyboard) and IRQ2 (slave pic) is allowed trough
 	out	PIC1_DATA, al		; write OCW1 to PIC1
 
-	mov	al, 11111101b		; OCW1 interrupt mask = 11111101 
+	mov	al, 11101111b		; OCW1 interrupt mask = 11101111 
 					; only IRQ12 (mouse) is allowed trough
 	out	PIC2_DATA, al		; 
 	ret
 ; *******
 ; IDT: setup interrupt handlers in IDT
 ; *******
-setup_interrupts:	
-	lea	eax, [division_by_zero]
+setup_interrupts_internal:	
+	lea	eax, [isr_division_by_zero]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], ax
 	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0x8
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0
@@ -183,7 +197,7 @@ setup_interrupts:
 	rol	eax, 16
 	mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], ax
 	
-	lea	eax, [timer]
+	lea	eax, [isr_timer]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*TIMER)], ax
 	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*TIMER)], 0x8
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*TIMER)], 0
@@ -191,7 +205,7 @@ setup_interrupts:
 	rol	eax, 16
 	mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*TIMER)], ax
 
-	;lea	eax, [keyboard]
+	;lea	eax, [isr_keyboard]
 	;mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*KEYB)], ax
 	;mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*KEYB)], 0x8
 	;mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*KEYB)], 0
@@ -199,7 +213,7 @@ setup_interrupts:
 	;rol	eax, 16
 	;mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*KEYB)], ax
 	
-	lea	eax, [custom]
+	lea	eax, [isr_custom]
 	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*CUSTOM)], ax
 	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0x8
 	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0
@@ -231,12 +245,11 @@ global inb:function
 inb:
 	push	ebp		; stack management
 	mov	ebp, esp
-	push	edx		;
+	push	edx
 	mov	edx, [ebp+8]	; get argument / the register
 	xor	eax, eax
 	in	al, dx		; get byte from input register
-	pop	edx		; restore edx
-	
+	pop	edx
 	mov	esp, ebp	; restore stack-frame
 	pop	ebp
 	ret
@@ -254,6 +267,7 @@ outb:
 	mov	eax, [ebp+12]	; second argument (the value)
 	out	dx, al		; write value to output register
 	pop	eax		; restore eax from stack
+
 	mov	esp, ebp	; restore stack frame
 	pop	ebp
 	ret
@@ -263,9 +277,18 @@ outb:
 ; *******
 section .isr
 ; ***************************
+; TEST INTERRUPT FUNCTION
+; ***************************
+global interrupt:function
+interrupt:
+	pushad
+	int	0x2d			;
+	popad
+	ret
+; ***************************
 ; division by zero handler
 ; ***************************
-division_by_zero:
+isr_division_by_zero:
 	;mov	esi,    text
 	;call	print
 	push	10
@@ -277,8 +300,9 @@ division_by_zero:
 ; ***************************
 ; timer - handles the clockinterrupts
 ; ***************************
-global timer:function
-timer:
+global isr_timer:function
+isr_timer:
+	cli
 	pushad
 	
 	xor 	eax, eax
@@ -287,16 +311,16 @@ timer:
 	mov 	eax, [ticks]
 	inc 	eax
 	mov	[ticks], eax	
-	mov	ebx, 0x02		; divide by 18 (18 times a second) 
+	mov	ebx, 0x12		; divide by 18 (18 times a second) 
 					; TODO: this leeds to inaccurate timing as PIT ticks at 18.2 times a second
 					; if used to represent time-ticks
 	div	ebx			; qoutient = eax, remainder = edx .. explain
-	cmp	edx, 0
-	jne	.end
-	mov	ebx, eax
-	push	0x33
-	call	_putchar
-	pop	eax
+	;cmp	edx, 0
+	;jne	.end
+	;mov	ebx, eax
+	;push	0x30
+	;call	_putchar
+	;pop	eax
 
 ;	push	word [ticks]
 ;	push	numbertxt
@@ -306,7 +330,8 @@ timer:
 .end:
 	mov	al, 0x20		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
-;	pop	eax
+	mov	al, 0x20		; EOI value
+	out	PIC2_CMD, al		; send EOI to PIC1
 	popad
 	sti				; restore interrupts
 	iret
@@ -320,8 +345,8 @@ timer:
 ; *---------*                *---------*
 ; (Motherboard)              (keyboard)
 ; ****************************
-global keyboard:function
-keyboard: 				
+global isr_keyboard:function
+isr_keyboard: 				
 	cli
 	pushad
 
@@ -378,13 +403,16 @@ keyboard:
 	mov	al, 0x20		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
 	popad
-	sti		
+	sti				; restore interrupts		
 	iret
 ; *********************
 ; custom (test) isr - declared global, and can be used in other modules
 ; *********************
-global custom:function			
-custom: 
+global isr_custom:function			
+isr_custom: 
+	cli
+	push	esp
+	mov	ebp, esp
 	push	eax
 	push	ebx
 	xor	eax, eax
@@ -398,7 +426,9 @@ custom:
 	mov	al, 0x20
 	out	PIC1_CMD, al		; send EOI
 	pop	ebx	
-	pop	eax	
+	pop	eax
+	pop	esp
+	sti				; restore interrupts	
 	iret
 ; *******
 ; data section
@@ -536,7 +566,7 @@ idt:
 		;db	10001110b
 		;db	0x0011
 
-		;times 256	db 0	; fill with 0 untill entry index 32
+		times 256	dd 0	; fill with 0 untill entry index 32
 		
 		; entry index 32(0x20):	
 		;dw	0x01dc		; offset B

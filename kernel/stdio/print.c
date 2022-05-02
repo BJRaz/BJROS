@@ -23,18 +23,48 @@ unsigned int 	vx = 0;
 unsigned int 	vy = 0;
 unsigned char* video = (unsigned char*)VIDEO;
 
-//extern void _scrollup();
-
 void _clear() 
 {
 	video = (unsigned char*)VIDEO;
 	for(int i=0;i<VIDEO_X * VIDEO_Y * 2;i++)
 	{
-		video[i] = 0;
+		video[i++] = 0;
+		video[i] = ATTRIBUTE;
 	}
+	vx = vy = 0;
 }
 
 void _putchar(char c) 
+{
+	if(c == '\n')
+	{
+newline:
+		vx = 0;
+		if(vy < VIDEO_Y - 1)
+			vy++;
+			
+		else
+			_scrollup();
+		return;		
+	}
+	if(c == 0x08) 
+	{	
+		// backspace
+		c = 0;
+		vx--;
+		*(video + (vx + vy * VIDEO_X) * 2) = c;
+		*(video + (vx + vy * VIDEO_Y) * 2 + 1) = ATTRIBUTE;
+		return;
+	}
+
+	*(video + (vx + vy * VIDEO_X) * 2) = c;
+	*(video + (vx + vy * VIDEO_Y) * 2 + 1) = ATTRIBUTE;
+	vx++;
+	if(vx >= VIDEO_X)
+		goto newline;
+}
+
+void _putchar_new(char c) 
 {
 	if(c == '\n')
 	{

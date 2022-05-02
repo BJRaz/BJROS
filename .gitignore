@@ -3,4 +3,5 @@
 *.vim
 *.bin.old
 tags
+bin/
 

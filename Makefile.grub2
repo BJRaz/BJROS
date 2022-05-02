@@ -1,9 +1,10 @@
 #settings HDD
 #GRUBFILEHD=setup_grub_hd.txt
 
-include Makefile
+include Makefile.grub_legacy
 
 MOUNTPOINT=/mnt/test
+MOUNTPOINTFD=/mnt/floppy
 OUTPUTHD=/media/sf_VBoxLinuxShare/binaries/hdd.img
 IMGHD=hdd.img
 LODEVHD=/dev/mapper/loop0p1
@@ -21,9 +22,29 @@ grubhd:	$(IMGHD) $(GRUBFILEHD) kernel.elf
 	cp kernel.elf $(MOUNTPOINT)/
 	-cp assets/kernel.bin.old $(MOUNTPOINT)/
 	grub2-install $(GRUBFLAGS) --boot-directory=$(MOUNTPOINT)/boot $(LODEV) 
-	cp grub.cfg $(MOUNTPOINT)/boot/grub2/
+	cp grub2/grub.cfg $(MOUNTPOINT)/boot/grub2/
 	umount $(MOUNTPOINT)						# umount partition 
 	kpartx -dv $(IMGHD)						# release loopback-device
 	sync
 installhd: grubhd
 	cp $(IMGHD) $(OUTPUTHD)	
+floppy:	kernel.elf $(IMG)
+	#losetup $(LODEV) $(IMG)
+	$(eval LODEV=$(shell losetup --show -f $(IMG)))
+	mkfs.ext2 -v $(LODEV) 
+	mount $(LODEV) $(MOUNTPOINTFD)
+	mkdir $(MOUNTPOINTFD)/boot
+	cp kernel.elf $(MOUNTPOINTFD)
+	grub2-install --target=i386-pc $(GRUBFLAGS) --force --allow-floppy --boot-directory=$(MOUNTPOINTFD)/boot $(LODEV)
+	cp grub2/grub_floppy.cfg $(MOUNTPOINTFD)/boot/grub2/grub.cfg
+	umount $(MOUNTPOINTFD)
+	losetup -d $(LODEV)
+installfloppy: floppy
+	cp $(IMG) $(OUTPUT)
+testeval:
+	losetup -d $(LODEV)
+
+
+
+
+	
