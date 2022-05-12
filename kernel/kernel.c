@@ -354,7 +354,7 @@ int sysinfo()
 	kprintf("multiboot magic header %x\n", mv);
 
 #ifdef __cplusplus
-	Sysinfo s;	// = new Sysinfo();
+	Sysinfo s;	// TODO: Sysinfo *s = new Sysinfo(); - needs implementation of new, delete and etc operators
 	kprintf("Sysinfo obj: %d\n", s.getTest());
 #endif
 	kprintf("PIC1: 0x%x\n", inb(PIC1_DATA));

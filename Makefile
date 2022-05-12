@@ -1,5 +1,5 @@
-CC=clang
-CFLAGS=-pedantic -nostdinc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iinclude -Imultiboot 
+CC=clang++
+CFLAGS=-pedantic -nostdinc -Wpadded -m32 -c -Wall -Iinclude -Imultiboot 
 AS=nasm
 ASFLAGS=-felf32 
 
