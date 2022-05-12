@@ -11,15 +11,18 @@ void printverylong();
 int _kprintf(const char* format, ...);
 void testuinttohex(uint32_t number);
 
+void _scrollup() {
+}
+
 // TODO: optimize
-void* _memset(void* buffer, const unsigned char c, int size) {
+/*void* _memset(void* buffer, const unsigned char c, int size) {
 	int idx = 0;
 	void* start = buffer;
 	while(idx++ < size) {
 		*(unsigned char*)start++ = c;
 	}
 	return buffer;
-}
+}*/
 
 void callback(char* buf) {
 	_kprintf("Her: %s\n", buf); 
@@ -53,7 +56,7 @@ int main(int argc, char** argv)
 	
 	char buf[5];
 
- 	void* p = _memset(buf, 0, 5);
+ 	void* p = _memset(buf, -0, -5);
 
 	char str = 'M'; //"Brian";
 	printf("%d\n", strlen(&str));

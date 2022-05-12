@@ -83,6 +83,18 @@ struct PACKED interrupt_gate_descriptor
 	uint16_t offset_hi; 
 };
 
+void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t isr_address) 
+{
+	idt_entry->offset_lo = (uint16_t)isr_address & 0xFFFF;
+	idt_entry->segment_selector = IDT_SEGMENT;
+	idt_entry->fill = IDT_FILL;
+	idt_entry->flags = IDT_FLAGS;
+	idt_entry->offset_hi = (uint16_t)(isr_address >> 16) & 0xFFFF; 
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 void ps2_controller_send_command(uint8_t command)
 {
 	while(inb(PS2_CMD) & 0x2);	// 
@@ -131,7 +143,7 @@ void setup_ps2()
 	ps2_response = ps2_controller_read_data();
 	kprintf("Ps2 config. byte: 0x%x\n", ps2_response);
 	
-	ps2_response &= 0b1011100;		// clear bits 0,1 and 6
+	ps2_response &= 0x5C;	//0b1011100;		// clear bits 0,1 and 6
 
 	kprintf("Ps2 changed configuration byte to: 0x%x\n", ps2_response);
 	ps2_controller_send_command(0x60);
@@ -163,7 +175,7 @@ void setup_ps2()
 	kprintf("Command read config. byte\n");
 	ps2_response = ps2_controller_read_data();
 	kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
-	ps2_response |= 0b0100011;		// enable bits 0,1 and 6
+	ps2_response |= 0x23;	//0b0100011;		// enable bits 0,1 and 6
 
 	// write back new config. byte
 	kprintf("Ps2 changed configuration byte to: 0x%x\n", ps2_response);
@@ -235,8 +247,6 @@ void setup_ps2()
 		
 
 }
-
-
 // test ISR
 // interrupt 2dH
 void ISR_FUNC isr(uint32_t arg)
@@ -289,21 +299,14 @@ void ISR_FUNC isr_mouse()
 	i_cli;
 	kprintf("Reads mousedata\n");
 	uint8_t response = ps2_controller_read_data(); 
-	kprintf("mouse... 0x%x\n", response);
+	kprintf("mouse says... 0x%x\n", response);
 	outb(PIC1_CMD, PIC_EOI);
 	outb(PIC2_CMD, PIC_EOI);
 	i_sti;
 	i_return;
 }
 
-void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t isr_address) 
-{
-	idt_entry->offset_lo = (uint16_t)isr_address & 0xFFFF;
-	idt_entry->segment_selector = IDT_SEGMENT;
-	idt_entry->fill = IDT_FILL;
-	idt_entry->flags = IDT_FLAGS;
-	idt_entry->offset_hi = (uint16_t)(isr_address >> 16) & 0xFFFF; 
-}
+
 
 void setup_interrupts() 
 {
@@ -321,6 +324,10 @@ void setup_interrupts()
 	set_isr_entry(idt_array + 13, (uint32_t)&isr);			// slot (13) - custom ISR for software INT test
 	
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 void showidtinfo(const struct interrupt_gate_descriptor* idt_array) 
 { 

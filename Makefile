@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-nostdinc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iinclude -Imultiboot 
+CFLAGS=-pedantic -nostdinc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iinclude -Imultiboot 
 AS=nasm
 ASFLAGS=-felf32 
 
@@ -17,7 +17,7 @@ LDFLAGS=-m elf_i386 -L bin -T linker.ld -static
 #LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
 #-M 
 OBJDIR:=bin
-OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o console.o string.so kernel.o) 
+OBJS:=$(addprefix $(OBJDIR)/, multiboot.o cursor.o atoi.o atou.o itoa.o utoa.o utox.o strlen.o print.o console.o string.o kernel.o) 
 
 LODEV=/dev/loop0
 # settings floppy
@@ -41,7 +41,7 @@ $(OBJS): | $(OBJDIR)					# order-only prerequisite
 
 # had to make this rule match *.so (shared object) 
 # when referencing assembly files
-$(OBJDIR)/%.so: %.asm
+$(OBJDIR)/%.o: %.asm
 	$(AS) $(ASFLAGS) $< -o $@
 # this matches all c-files
 $(OBJDIR)/%.o: %.c
@@ -66,7 +66,7 @@ bochs: install
 qemu: install
 	qemu -fda floppy.img 
 TAGS:
-	-ctags .
+	-ctags -R *
 tests:	$(OBJS) itoa.c 
-	#$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 
-	$(CC) -m32 -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so bin/string.so 
+	$(CC) -m32 -g -I. -o test $(filter-out $(OBJDIR)/multiboot.o $(OBJDIR)/console.o $(OBJDIR)/kernel.o, $^) 
+#	$(CC) -m32 -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so bin/string.so 

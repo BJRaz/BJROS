@@ -99,14 +99,14 @@ void _putchar_new(char c)
 } 
 
 void* _memset(void* buffer, unsigned char c, int size) {
-	int idx = 0;
-	while(idx < size) 
+	unsigned char* _buffer = (unsigned char*)buffer;
+	unsigned char* end = _buffer + size;
+	while(_buffer < end)
 	{
-		*(unsigned char*)buffer = c;
-		idx++;
-		buffer++;
+		*_buffer = c;
+		_buffer++;
 	}
-	return buffer -= size;
+	return buffer;
 }
 
 int kprint(const char* text) {

@@ -10,13 +10,18 @@
 
 #define KBD_ARRAY_SIZE	128
 
-extern char kbdchar;
-extern char kbdarray[KBD_ARRAY_SIZE];
-extern char kbdarray_upper[KBD_ARRAY_SIZE];	
+#ifdef __cplusplus
+extern "C" {
+#endif
+	extern char kbdchar;
+	extern char kbdarray[KBD_ARRAY_SIZE];
+	extern char kbdarray_upper[KBD_ARRAY_SIZE];	
 
-extern void setcursor(uint32_t x, uint32_t y);	// sets cursor on screen
-extern uint32_t vx, vy;				// 
+	extern void setcursor(uint32_t x, uint32_t y);	// sets cursor on screen
+	extern uint32_t vx, vy;				// 
 
-void prompt(void (*)(char*));
-
+	void prompt(void (*)(char*));
+#ifdef __cplusplus
+}
+#endif
 #endif
