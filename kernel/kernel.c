@@ -101,6 +101,15 @@ uint8_t ps2_controller_read_data()
 	return inb(PS2_DATA);
 }
 
+uint8_t ps2_output_buffer_status() {
+	return inb(PS2_CMD) & 0x1; 
+}
+
+uint8_t ps2_input_buffer_status() {
+	return inb(PS2_CMD) & 0x2;
+}
+
+
 void setup_ps2()
 {
 	uint8_t ps2_response = 0;
@@ -115,78 +124,81 @@ void setup_ps2()
 	// STEP 3-4: disable devices and read result
 	// disable first PS2 port (kbd)
 	ps2_controller_send_command(0xAD);
-	kprintf("Disable kbd PS2 port 1 sent\n");
+	kprintf(">ps2: Disable kbd PS2 port 1\n");
 	/*ps2_response = ps2_controller_read_data();
 	kprintf("Ps2 response: 0x%x\n", ps2_response);*/
 
 	// disable second PS2 port (mouse)
 	ps2_controller_send_command(0xA7);
-	kprintf("Disable mouse PS2 port 2\n");
+	kprintf(">ps2: Disable mouse PS2 port 2\n");
 	/*ps2_response = ps2_controller_read_data();
 	kprintf("Ps2 response: 0x%x\n", ps2_response);*/
 	
 	// STEP 5: Get and set configuration byte 
 	ps2_controller_send_command(0x20);
-	kprintf("Command read config. byte\n");
+	kprintf(">ps2: read config: ");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 config. byte: 0x%x\n", ps2_response);
+	kprintf("<ps2: config. byte: 0x%x\n", ps2_response);
 	
 	ps2_response &= 0b1011100;		// clear bits 0,1 and 6
 
-	kprintf("Ps2 changed configuration byte to: 0x%x\n", ps2_response);
+	kprintf(">Ps2: changing configuration byte to: 0x%x\n", ps2_response);
 	ps2_controller_send_command(0x60);
 	ps2_controller_write_data(ps2_response);
 	
 	// STEP 6: Do self test - should result in 0x55 
 	ps2_controller_send_command(0xAA);
-	kprintf("Command sendt (self test)\n");
+	kprintf(">ps2: (self test) ");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 self test status: 0x%x - %s\n", ps2_response, (ps2_response == 0x55) ? "OK": "NOK OK");
+	kprintf("<ps2: self test status: 0x%x - %s\n", ps2_response, (ps2_response == 0x55) ? "OK": "NOK OK");
 
 	// STEP 7: (optional)
 	// STEP 8: first and second port status test 
 	ps2_controller_send_command(0xAB);
-	kprintf("Command 1 port status test\n");
+	kprintf(">ps2: port 1 status test ");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 first port status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+	kprintf("<Ps2: port 1 status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
 	ps2_controller_send_command(0xA9);
-	kprintf("Command 2 port status test)\n");
+	kprintf(">ps2: port 2 status test ");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 second port status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
+	kprintf("<Ps2: port 2 status: 0x%x - %s\n", ps2_response, (ps2_response == 0x00) ? "OK" : "NOT OK");
 
 	// STEP 9: enable ports 1 and 2
 	ps2_controller_send_command(0xAE);
-	kprintf("Command 1 port enable)\n");
+	kprintf(">ps2: port 1 enable)\n");
 	ps2_controller_send_command(0xA8);
-	kprintf("Command 2 port enable\n");
+	kprintf(">ps2: port 2 enable\n");
 	ps2_controller_send_command(0x20);
-	kprintf("Command read config. byte\n");
+	kprintf(">ps2: read config. byte ");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 configuration byte: 0x%x\n", ps2_response);
+	kprintf("<Ps2: configuration byte: 0x%x\n", ps2_response);
 	ps2_response |= 0b0100011;		// enable bits 0,1 and 6
 
 	// write back new config. byte
-	kprintf("Ps2 changed configuration byte to: 0x%x\n", ps2_response);
+	kprintf(">Ps2: changing configuration byte to: 0x%x\n", ps2_response);
 	ps2_controller_send_command(0x60);
 	ps2_controller_write_data(ps2_response);
 	
 	// STEP 10: reset devices
 	//ps2_controller_send_command(0xD1);		// maybe, maybe not..
 	ps2_controller_write_data(0xFF);
-	kprintf("Command reset kbd written\n");
+	kprintf(">ps2: reset kbd ");
+	//while(ps2_output_buffer_status()) {
+		ps2_response = ps2_controller_read_data();
+		kprintf("<Ps2: 0x%x\n", ps2_response);	// read acknowledge
+
+	//}
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read acknowledge
-	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 response: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK");	// read response AA (passed)
+	kprintf("<Ps2: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK");	// read response AA (passed)
 
 	// send RESET to mouse device
 	ps2_controller_send_command(0xD4);
 	ps2_controller_write_data(0xFF);
-	kprintf("Command reset mouse written\n");
+	kprintf(">ps2: reset mouse ");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 response: 0x%x\n", ps2_response);	// read ack
+	kprintf("<Ps2: 0x%x\n", ps2_response);	// read ack
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 response: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK"); 	// read response AA
+	kprintf("<Ps2: 0x%x - %s\n", ps2_response, (ps2_response == 0xaa) ? "Self test OK" : "NOT OK"); 	// read response AA
 
 /*	
 
@@ -198,19 +210,22 @@ void setup_ps2()
 */
 	ps2_controller_send_command(0xD4);	// 
 	ps2_controller_write_data(0xF3);	// set sample rate command
+	kprintf(">ps2: sample rate 0xF3 ");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 command status: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
+	kprintf("<Ps2: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
 
 	ps2_controller_send_command(0xD4);	// 
 	ps2_controller_write_data(100);		// set sample rate to 100
+	kprintf(">ps2: sample rate 100 ");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 command status: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
+	kprintf("<Ps2: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
 
 
 	ps2_controller_send_command(0xD4);	// 
 	ps2_controller_write_data(0xF4);	// enable data reporting - mouse wont work until this is set
+	kprintf(">ps2: enable data reporting ");
 	ps2_response = ps2_controller_read_data();
-	kprintf("Ps2 command status: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
+	kprintf("<Ps2: 0x%x - %s\n", ps2_response, (ps2_response == 0xFA) ? "OK" : "NOT OK");
 /*
  * This should disable keyboard, and return the keyboards IDENTIFICATION byte(s)
  * does not work as of sept. 20 2021.
@@ -335,7 +350,7 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 int sysinfo() 
 {
 	int len = 0;
-	kprintf("****** BJROS ******\n");
+	kprintf("****** BJROS v0.1 ******\n");
 	char* text = "Welcome to BJROS ...\n";
 	len = kprint(text);
 	kprintf("multiboot info address: 0x%x\n", &mb_info); 
@@ -437,7 +452,7 @@ extern "C" {
 	{
 		mb_info = multiboot_structure;
 		mv = magicvalue;
-		_clear();		
+	//	_clear();		
 		prompt(callback);
 		
 		return 0;	

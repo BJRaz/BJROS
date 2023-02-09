@@ -10,14 +10,15 @@ LDFLAGS=-m elf_i386 -L bin -T linker.ld -static
 #LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
 #-M 
 AS=nasm
-ASFLAGS=-felf32 -Fdwarf   
-LODEV=/dev/loop0
+ASFLAGS=-felf32 #-Fdwarf   
 OBJDIR:=bin
 OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o console.o string.so kernel.o) 
+
 # settings floppy
 GRUBFILE=grub_legacy/setup_grub.txt
 OUTPUT=/media/sf_VBoxLinuxShare/binaries/floppy.img	# TODO path remove etc...
 IMG=floppy.img
+LODEV=/dev/loop0
 MOUNTPOINT=/mnt/floppy
 
 #settings HDD
@@ -60,7 +61,7 @@ bochs: install
 qemu: install
 	qemu -fda floppy.img 
 TAGS:
-	ctags --exclude=k.c -R .
+	ctags --exclude=k.c --exclude=jail/ -R .
 tests:	$(OBJS) itoa.c 
 	#$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 
-	$(CC) -m32 -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so bin/string.so 
+	$(CC) -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so bin/string.so 

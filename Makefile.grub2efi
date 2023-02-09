@@ -13,20 +13,17 @@ LODEV=/dev/loop0
 GRUBFLAGS=--target=i386-pc --locales=en@piglatin --fonts=ascii --install-modules="multiboot normal part_msdos ext2" --modules="multiboot normal part_msdos ext2" 
 
 $(IMGHD):	 
-	dd if=/dev/zero of=$(IMGHD) bs=1024 count=30000			# makes a hdd image of size 30MB
-	#parted $(IMGHD) mklabel gpt mkpart primary 1 30 set 1 boot on # check for 1 10 in start, end for mkpart !
-	parted $(IMGHD) mklabel msdos mkpart primary 1 30 set 1 boot on # check for 1 10 in start, end for mkpart !
+	dd if=/dev/zero of=$(IMGHD) bs=512 count=1000000			# makes a hdd image of size 512MB
+	parted $(IMGHD) mklabel gpt mkpart efi fat32 2048s 200Mib set 1 boot on # check for 1 10 in start, end for mkpart !
 grubhd:	$(IMGHD) $(GRUBFILEHD)
 	kpartx -av $(IMGHD)						# assign partition(s) to loopback-device (dev/mapper/loop0p1)
-	mkfs.ext2 -v $(LODEVHD)						# make filesystem on partition
+	mkfs.fat -F 32 -v $(LODEVHD)						# make filesystem on partition
 	mount $(LODEVHD) $(MOUNTPOINT)					# mount partition 
-	mkdir -p $(MOUNTPOINT)/boot					# make grub dirs and copy files
+	mkdir -p $(MOUNTPOINT)/boot/efi					# make grub dirs and copy files
 	cp kernel.elf $(MOUNTPOINT)/
-	-cp assets/kernel.bin.old $(MOUNTPOINT)/
-#	grub2-install $(GRUBFLAGS) --boot-directory=$(MOUNTPOINT)/boot $(LODEV) 
 	mount --bind /proc $(JAIL)/proc
 	mount --bind /dev $(JAIL)/dev
-	chroot $(JAIL) /grub2.sh
+	-chroot $(JAIL) /grub2.sh
 	cp -p grub2/grub.cfg $(MOUNTPOINT)/boot/grub2/
 	umount $(MOUNTPOINT)						# umount partition 
 	umount $(JAIL)/proc
