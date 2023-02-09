@@ -13,6 +13,7 @@ AS=nasm
 ASFLAGS=-felf32 #-Fdwarf   
 OBJDIR:=bin
 OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o console.o string.so kernel.o) 
+BUILDDIR=build/x86
 
 # settings floppy
 GRUBFILE=grub_legacy/setup_grub.txt
@@ -45,8 +46,10 @@ $(OBJDIR)/%.o: %.c
 
 $(OBJDIR):
 	-mkdir $(OBJDIR) 
-kernel.elf: $(OBJS)  
-	$(LD) $(LDFLAGS) $^ -o kernel.elf
+$(BUILDDIR):
+	-mkdir -p $(BUILDDIR)
+kernel.elf: $(OBJS) | $(BUILDDIR)  
+	$(LD) $(LDFLAGS) $^ -o $(BUILDDIR)/kernel.elf
 	-mbchk $@
 clean:
 	-rm -f -r $(OBJS) kernel.o
@@ -55,7 +58,7 @@ clean:
 	-rm -f test 
 #	-rm -f tags
 	-rm -f $(IMGHD) 
-	-rm -rf $(OBJDIR)
+	-rm -rf $(OBJDIR) $(BUILDDIR)
 bochs: install
 	bochs "boot:floppy" "floppya: 1_44=floppy.img, status=inserted"
 qemu: install

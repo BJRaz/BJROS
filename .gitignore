@@ -4,4 +4,6 @@
 *.bin.old
 tags
 bin/
+jail/
+build/
 
