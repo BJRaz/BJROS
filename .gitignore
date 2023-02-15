@@ -6,4 +6,5 @@ tags
 bin/
 jail/
 build/
+*.img
 

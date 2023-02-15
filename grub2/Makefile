@@ -1,30 +1,32 @@
 #settings HDD
 #GRUBFILEHD=setup_grub_hd.txt
 
-include Makefile.grub_legacy
-
-JAIL=jail
+JAIL=../jail
 MOUNTPOINT=$(JAIL)/mnt
-MOUNTPOINTFD=/mnt/floppy
-OUTPUTHD=/media/sf_vboxshare/builds/bjros #/media/sf_VBoxLinuxShare/binaries/hdd.img
+MOUNTPOINTFD=$(JAIL)/mnt/floppy
 IMGHD=hdd.img
+IMGHDDGPT=hddgpt.img
 LODEVHD=/dev/mapper/loop0p1
 LODEV=/dev/loop0
 GRUBFLAGS=--target=i386-pc --locales=en@piglatin --fonts=ascii --install-modules="multiboot normal part_msdos ext2" --modules="multiboot normal part_msdos ext2" 
+BUILDDIR=../build/x86
 
 $(IMGHD):	 
-	dd if=/dev/zero of=$(IMGHD) bs=512 count=1000000			# makes a hdd image of size 512MB
-	parted $(IMGHD) mklabel gpt mkpart efi fat32 2048s 200Mib set 1 boot on # check for 1 10 in start, end for mkpart !
-grubhd:	$(IMGHD) $(GRUBFILEHD)
+	dd if=/dev/zero of=$(IMGHD) bs=1024 count=30000				# makes a hdd image of size 30MB
+	parted $(IMGHD) mklabel msdos mkpart primary 1 30 set 1 boot on 	# 
+$(IMGHDDGPT):
+	dd if=/dev/zero of=$(IMGHDDGPT) bs=512 count=1000000			# makes a hdd image of size 512MB
+	parted $(IMGHDDGPT) mklabel gpt mkpart EFI 1 200 set 1 boot on 		#
+grubhd:	$(IMGHD) 
 	kpartx -av $(IMGHD)						# assign partition(s) to loopback-device (dev/mapper/loop0p1)
-	mkfs.fat -F 32 -v $(LODEVHD)						# make filesystem on partition
+	mkfs.ext2 -v $(LODEVHD)						# make filesystem on partition
 	mount $(LODEVHD) $(MOUNTPOINT)					# mount partition 
-	mkdir -p $(MOUNTPOINT)/boot/efi					# make grub dirs and copy files
-	cp kernel.elf $(MOUNTPOINT)/
+	mkdir -p $(MOUNTPOINT)/boot					# make grub dirs and copy files
+	cp $(BUILDDIR)/kernel.elf $(MOUNTPOINT)/
 	mount --bind /proc $(JAIL)/proc
 	mount --bind /dev $(JAIL)/dev
-	-chroot $(JAIL) /grub2.sh
-	cp -p grub2/grub.cfg $(MOUNTPOINT)/boot/grub2/
+	chroot $(JAIL) /grub2.sh
+	cp -p grub.cfg $(MOUNTPOINT)/boot/grub2/
 	umount $(MOUNTPOINT)						# umount partition 
 	umount $(JAIL)/proc
 	umount $(JAIL)/dev
@@ -38,7 +40,7 @@ floppy:	kernel.elf $(IMG)
 	mkfs.ext2 -v $(LODEV) 
 	mount $(LODEV) $(MOUNTPOINTFD)
 	mkdir $(MOUNTPOINTFD)/boot
-	cp kernel.elf $(MOUNTPOINTFD)
+	cp $(BUILDDIR)/kernel.elf $(MOUNTPOINTFD)
 	grub2-install --target=i386-pc $(GRUBFLAGS) --force --allow-floppy --boot-directory=$(MOUNTPOINTFD)/boot $(LODEV)
 	cp grub2/grub_floppy.cfg $(MOUNTPOINTFD)/boot/grub2/grub.cfg
 	umount $(MOUNTPOINTFD)
@@ -47,8 +49,6 @@ installfloppy: floppy
 	cp $(IMG) $(OUTPUT)
 testeval:
 	losetup -d $(LODEV)
-
-
-
-
-	
+clean:
+	-rm hdd.img	
+	-rm hddgpt.img	
