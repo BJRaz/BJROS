@@ -43,6 +43,8 @@ extern kprintf
 extern _putchar
 extern setup_ps2
 extern setup_interrupts
+extern isr_mouse_handler
+extern isr_handler
 
 global gdtr:data
 global gdt:data
@@ -81,32 +83,29 @@ setup:
 	mov	fs, cx
 	mov	gs, cx
 	mov	ss, cx
-
-
 	
 	mov	esp, 0x7c00		; TODO:  stack starts at 0x7c00, will grow downwards 
 					; and use conventional mem (about 30 kiB) - change address to higher mem area
 	mov	ebp, esp 	
 	
-	push	eax			; contains magic value (magic number)
-	push	ebx			; address of multiboot structure
-
-	call 	setup_interrupts	; setup interrupt service routines etc..
 	call 	setup_pic		; init of PIC (programmable interrupt controller)
+	call 	setup_interrupts	; setup interrupt service routines etc..
 	call	setup_ps2		; setup the PS/2 controller
 	
 	call 	setup_vga		; 	
-
+	
 	sti				; enable interrupts
- 	
-	call 	kmain			;_kmain			; call kernel main function
+	
+	push	eax			; contains magic value (magic number)
+	push	ebx			; address of multiboot structure
+	call 	kmain			; call kernel main function (_kmain for testing)
 
 	mov	eax, cs			; (test) stores visible content of Code Section to eax 
 					; at this point the value should be 0d (00000000 00001000) - 1 = index 8
 					; and 0 = GDT, 00 = priviledge level
-mainloop:
-	jmp	mainloop
-	hlt
+mainhalt:
+	hlt				; halts cpus execution - wakesup on interrupts (nmi,external etc)
+	jmp	mainhalt		; needed to resume halt state after a interrupt/exception handlers 'iret' call
 ; *******
 ; VGA
 ; *******
@@ -115,7 +114,7 @@ setup_vga:
 	mov	word [cursor.x], 0	; consider make them global
 	ret
 global setcursor:function
-setcursor
+setcursor:
 	push 	ebp
 	mov 	ebp, esp
 	push	eax
@@ -176,7 +175,9 @@ setup_pic:
 	mov	al, 00000001b		; ICW4: bit 0 = 1 enables 80x86
 	out	PIC1_DATA, al		; write to both controllers
 	out	PIC2_DATA, al		;
-				
+	; 
+	; enable/disable IRQs
+	;				
 	mov	al, 11111000b		; OCW1 interrupt mask = 11111001 
 					; only IRQ1 (keyboard) and IRQ2 (slave pic) is allowed trough
 	out	PIC1_DATA, al		; write OCW1 to PIC1
@@ -277,6 +278,25 @@ outb:
 ; *******
 section .isr
 ; ***************************
+; Mouse handler wrapper
+; ***************************
+global isr_mouse:function
+isr_mouse:
+	pushad
+;	cli
+	call isr_mouse_handler
+;	sti
+	popad
+	iret
+global isr:function
+isr:
+	pushad
+	cli
+	call isr_handler
+	sti
+	popad
+	iret
+; ***************************
 ; TEST INTERRUPT FUNCTION
 ; ***************************
 global interrupt:function
@@ -288,6 +308,7 @@ interrupt:
 ; ***************************
 ; division by zero handler
 ; ***************************
+global isr_division_by_zero:function
 isr_division_by_zero:
 	;mov	esi,    text
 	;call	print
@@ -315,12 +336,12 @@ isr_timer:
 					; TODO: this leeds to inaccurate timing as PIT ticks at 18.2 times a second
 					; if used to represent time-ticks
 	div	ebx			; qoutient = eax, remainder = edx .. explain
-	;cmp	edx, 0
-	;jne	.end
-	;mov	ebx, eax
-	;push	0x30
-	;call	_putchar
-	;pop	eax
+	cmp	edx, 0
+	jne	.end
+	mov	ebx, eax
+	push	0x30
+	call	_putchar
+	pop	eax
 
 ;	push	word [ticks]
 ;	push	numbertxt
@@ -451,7 +472,7 @@ section .data
 	text3		db	"Division by zero!", 0xa, 0
 	text4		db	"Keyboard IRS called %x", 0xa, 0
 	numbertxt	db	"%d", 0xa, 0
-	hextxt		db	"%x", 0xa, 0
+	hextxt		db	"0%x 0%x 0%x 0%x", 0xa, 0
 	kbpressed	db	0
 	kbdchar		db	0	; the last character from keyboard
 	kbdarray	db	0, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '+', 0, 0x08

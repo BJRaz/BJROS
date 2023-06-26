@@ -1,0 +1,3 @@
+
+bochs: 
+	bochs "boot:floppy" "floppya: 1_44=floppy.img, status=inserted"
