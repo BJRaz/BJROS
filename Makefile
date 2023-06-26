@@ -1,19 +1,25 @@
 CC=clang
 CFLAGS=-nostdinc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iinclude -Imultiboot 
+AS=nasm
+ASFLAGS=-felf32 
+
+ifeq ($(DEBUG), 1)
+	CFLAGS := $(CFLAGS) -g
+	ASFLAGS := $(ASFLAGS) -Fdwarf
+endif
 
 ifeq ($(CC), clang)
-	CFLAGS := $(CFLAGS) -nobuiltininc	# clang specific option
+	CFLAGS := $(CFLAGS) -arch i386 -target i386-pc-none-elf -nobuiltininc	# clang specific option
 endif
 
 LD=ld
 LDFLAGS=-m elf_i386 -L bin -T linker.ld -static 
 #LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
 #-M 
-AS=nasm
-ASFLAGS=-felf32 -Fdwarf   
-LODEV=/dev/loop0
 OBJDIR:=bin
 OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o console.o string.so kernel.o) 
+
+LODEV=/dev/loop0
 # settings floppy
 GRUBFILE=grub_legacy/setup_grub.txt
 OUTPUT=/media/sf_VBoxLinuxShare/binaries/floppy.img	# TODO path remove etc...
@@ -27,7 +33,7 @@ IMGHD=hdd.img
 LODEVHD=/dev/mapper/loop0p1
 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
-vpath %.h include					# search for specific filetypes in <dir>
+vpath %.h include								# search for specific filetypes in <dir>
 
 all: kernel.elf TAGS
 
@@ -60,7 +66,7 @@ bochs: install
 qemu: install
 	qemu -fda floppy.img 
 TAGS:
-	ctags --exclude=k.c -R .
+	-ctags .
 tests:	$(OBJS) itoa.c 
 	#$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 
 	$(CC) -m32 -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so bin/string.so 
