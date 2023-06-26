@@ -339,7 +339,7 @@ isr_timer:
 	cmp	edx, 0
 	jne	.end
 	mov	ebx, eax
-	push	0x30
+	push	0x31			; char '1'
 	call	_putchar
 	pop	eax
 

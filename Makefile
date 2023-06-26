@@ -1,4 +1,4 @@
-CC=clang
+CC=gcc
 CFLAGS=-nostdinc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iinclude -Imultiboot 
 AS=nasm
 ASFLAGS=-felf32 
