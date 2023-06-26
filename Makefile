@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-nostdinc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iinclude -Imultiboot 
+CFLAGS=-nostdinc -Wpadded -std=c99 -Wattributes -m32 -c -Wall -ffreestanding -fno-stack-protector -Iinclude -Imultiboot 
 
 ifeq ($(CC), clang)
 	CFLAGS := $(CFLAGS) -nobuiltininc	# clang specific option
@@ -15,23 +15,10 @@ OBJDIR:=bin
 OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o console.o string.so kernel.o) 
 BUILDDIR=build/x86
 
-# settings floppy
-GRUBFILE=grub_legacy/setup_grub.txt
-OUTPUT=/media/sf_VBoxLinuxShare/binaries/floppy.img	# TODO path remove etc...
-IMG=floppy.img
-LODEV=/dev/loop0
-MOUNTPOINT=/mnt/floppy
-
-#settings HDD
-GRUBFILEHD=grub_legacy/setup_grub_hd.txt
-OUTPUTHD=/media/sf_VBoxLinuxShare/binaries/hdd.img
-IMGHD=hdd.img
-LODEVHD=/dev/mapper/loop0p1
-
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
 vpath %.h include					# search for specific filetypes in <dir>
 
-all: kernel.elf TAGS
+all: $(BUILDDIR)/kernel.elf TAGS
 
 $(OBJS): | $(OBJDIR)					# order-only prerequisite
 
@@ -48,23 +35,20 @@ $(OBJDIR):
 	-mkdir $(OBJDIR) 
 $(BUILDDIR):
 	-mkdir -p $(BUILDDIR)
-kernel.elf: $(OBJS) | $(BUILDDIR)  
+$(BUILDDIR)/kernel.elf: $(OBJS) | $(BUILDDIR)  
 	$(LD) $(LDFLAGS) $^ -o $(BUILDDIR)/kernel.elf
 	-mbchk $@
 clean:
-	-rm -f -r $(OBJS) kernel.o
-	-rm -f $(IMG)	
-	-rm -f kernel.elf
-	-rm -f test 
-#	-rm -f tags
-	-rm -f $(IMGHD) 
+	-rm -f tests/test 
 	-rm -rf $(OBJDIR) $(BUILDDIR)
-bochs: install
-	bochs "boot:floppy" "floppya: 1_44=floppy.img, status=inserted"
-qemu: install
-	qemu -fda floppy.img 
+	-cd grub2 && $(MAKE) clean
 TAGS:
-	ctags --exclude=k.c --exclude=jail/ -R .
-tests:	$(OBJS) itoa.c 
-	#$(CC) -g -I. -o test $(filter-out $(OBJDIR)/multiboot.so $(OBJDIR)/kernel.o, $^) 
-	$(CC) -I. -g tests/stdio/itoa.c -o test bin/atoi.so bin/atou.so bin/utoa.so bin/itoa.so bin/utox.so bin/strlen.so bin/string.so 
+	ctags --exclude=kernel/k.c --exclude=jail/ -R .
+export CC OBJS OBJDIR
+
+.PHONY:	tests grub2
+
+tests:	$(OBJS)	
+	cd tests && $(MAKE)
+grub2:	$(BUILDDIR)/kernel.elf
+	cd grub2 && $(MAKE)
