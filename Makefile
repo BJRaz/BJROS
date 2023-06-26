@@ -33,7 +33,7 @@ IMGHD=hdd.img
 LODEVHD=/dev/mapper/loop0p1
 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
-vpath %.h include					# search for specific filetypes in <dir>
+vpath %.h include								# search for specific filetypes in <dir>
 
 all: kernel.elf TAGS
 
