@@ -43,11 +43,5 @@ void prompt(void (*readbuf)(char*)) {
 	}
 }
 
-char _getchar(void) {
-	while(kbdchar==0); 						// TODO: busy wait - refactor! 	
-	char result = kbdchar;
-	kbdchar = 0;
-	return result;
-}
 
 

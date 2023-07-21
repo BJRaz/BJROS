@@ -10,7 +10,7 @@
 // input-routines 
 // cursor-routines
 //
-
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -32,6 +32,13 @@ void _clear()
 		video[i] = ATTRIBUTE;
 	}
 	vx = vy = 0;
+}
+
+char _getchar(void) {
+	while(kbdchar==0);	// TODO: busy wait - refactor! 	
+	char result = kbdchar;
+	kbdchar = 0;
+	return result;
 }
 
 void _putchar(char c) 
@@ -131,7 +138,7 @@ int kprintln(const char* text) {
 int kprintf(const char* format, ...)
 {
 	int count = 0;
-	void* args = (int*)(&format + 4);	// TODO: before: in clang +4, in gcc this has to be added with +1
+	void* args = (int*)(&format + 1);	// TODO: before: in clang +4, in gcc this has to be added with +1
 						// now: is has to be +1 for clang as well (check)
 
 	//while(*format != '\0')			// TODO: optimize this 

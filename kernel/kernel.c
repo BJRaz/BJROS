@@ -66,6 +66,12 @@ extern "C" {
 
 struct interrupt_gate_descriptor *idt_array;
 struct multiboot_info* mb_info;
+
+struct stackframe {
+	uint32_t EIP;
+	uint32_t CS;
+	uint32_t EFLAGS;
+};
 void* mv;						// pointer to the magicvalue
 
 // need the attribute packed, otherwise the alignment of short limit is 4 bytes
@@ -253,7 +259,25 @@ void setup_ps2()
 
 }
 
+// Keyboard test ISR
+// 
+void ISR_FUNC isr_keyboard_handler(void *arg)
+{
+	struct stackframe *frame = &arg-1;
+	// TODO: store all relevant regs in stack
+	// check stack segment etc.
+	char command = inb(PS2_CMD);	
+	char scancode = inb(PS2_DATA);	
+	kprintf("0x%x\n", command & 0b00000001);
+	kprintf("0x%x\n", scancode & 0x000000FF);
+	kprintf("EIP: 0x%x, CS: 0x%x, FLAGS: 0x%x\n", frame->EIP, frame->CS, frame->EFLAGS);
 
+	if(scancode == 0x2a)
+		kprintf("Shift is pressed");
+	outb(PIC1_CMD, PIC_EOI);				// send EOI to PIC 1
+	outb(PIC2_CMD, PIC_EOI);				// send EOI to PIC 2
+	i_return;
+}
 // test ISR
 // interrupt 2dH
 void ISR_FUNC isr_handler(uint32_t arg)
@@ -346,7 +370,7 @@ void setup_interrupts()
 	idt_array += 19;						// set address past the first 32 entries which is reserved intel/cpu	
 	
 	set_isr_entry(idt_array, (uint32_t)&isr_timer); 		// slot (0) - system timer
-	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);		// slot (1) - keyboard PS/2
+	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);	// slot (1) - keyboard PS/2
 	//set_isr_entry(idt_array + 8, (uint32_t)&timer);		// slot (8) - Real time clock
 	set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse);		// slot (12) - mouse PS/2
 	set_isr_entry(idt_array + 13, (uint32_t)&isr);			// slot (13) - custom ISR for software INT test

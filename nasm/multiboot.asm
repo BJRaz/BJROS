@@ -21,10 +21,11 @@ bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protec
 %define KEYB		0x9
 %define CUSTOM		0x2c
 
-%define PIC1_DATA	0x21		; master programmable interrupt controller data port
+%define PIC1_DATA	0x21		; master programmable interrupt controller (PIC) - data port
 %define PIC1_CMD	0x20		;  - command port	
-%define PIC2_DATA	0xa1
-%define PIC2_CMD	0xa0
+%define PIC2_DATA	0xa1		; PIC 2 - data port
+%define PIC2_CMD	0xa0		; PIC 2 - command port
+%define PIC_EOI		0x20		; End Of Interrupt
 
 %define PS2_DATA	0x60		; i8042 ps/2 controller data port (r/w)
 %define PS2_CMD		0x64		; i8042 ps/2 status register (read), command register (write)
@@ -178,7 +179,7 @@ setup_pic:
 	; 
 	; enable/disable IRQs
 	;				
-	mov	al, 11111000b		; OCW1 interrupt mask = 11111001 
+	mov	al, 11111001b		; OCW1 interrupt mask = 11111001 
 					; only IRQ1 (keyboard) and IRQ2 (slave pic) is allowed trough
 	out	PIC1_DATA, al		; write OCW1 to PIC1
 
@@ -349,18 +350,18 @@ isr_timer:
 ;	pop	eax
 ;	pop	ebx
 .end:
-	mov	al, 0x20		; EOI value
+	mov	al, PIC_EOI		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
-	mov	al, 0x20		; EOI value
+	mov	al, PIC_EOI		; EOI value
 	out	PIC2_CMD, al		; send EOI to PIC1
 	popad
 	sti				; restore interrupts
 	iret
 ; ****************************
-; keyboard handler (i8042)
+; keyboard handler PS/2 (i8042)
 ; note: 
-; I/O port 0x64 (write) is send to the "onboard"-kbdcontroller 
-; I/O port 0x60 (write) is send to the "in-kbd-case"-controller
+; I/O port 0x64 (write) is sent to the "motherboard"-controller 
+; I/O port 0x60 (write) is sent to the "in-kbd-case"-controller
 ; *---------*                *---------*
 ; *  0x64   *      <-->      *  0x60   *
 ; *---------*                *---------*
@@ -373,21 +374,16 @@ isr_keyboard:
 
 	xor	eax, eax
 .waitstatus:
-	in	al, 0x64		; read status byte from i8042
+	in	al, PS2_CMD		; read status byte from i8042
 	and	al, 0x1			; read byte 0, if al = 1, then buffer is full
 	cmp	al, 0x1			; wait as long buffer is not full
 	jne	.waitstatus
 
 
-	in	al, 0x60		; read scancode from keyboard buffer (the keyboard encoder)
+	in	al, PS2_DATA		; read scancode from keyboard buffer (the keyboard encoder)
 					; key press is called 'make', key release is called 'break'
 	
-	;cmp	al, 0x1c
-	;jne	.cont
-	;call	_scrollup
 .cont:
-;	push   	eax 				
-;	push 	eax
 	mov	ebx, eax		; store scancode - use stack ?
 	and	al, 0x80		; check for bit 7 is 1 (the key is released - aka 'break')
 	cmp	al, 0
@@ -421,7 +417,7 @@ isr_keyboard:
 .shiftup:
 	and	byte [kbdstatus], 0	; 	
 .end:
-	mov	al, 0x20		; EOI value
+	mov	al, PIC_EOI		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
 	popad
 	sti				; restore interrupts		
@@ -465,7 +461,6 @@ section .data
 	INT_DESCRIPTOR_OFFSETB	equ	6
 	INT_DESCRIPTOR_SIZE	equ	8	
 
-	kbdstatus	db	0	; internal keybaord status field
 	
 	text		db	"Kernel loaded ..",0
 	text2		db	"Halted...", 0
@@ -474,6 +469,7 @@ section .data
 	numbertxt	db	"%d", 0xa, 0
 	hextxt		db	"0%x 0%x 0%x 0%x", 0xa, 0
 	kbpressed	db	0
+	kbdstatus	db	0	; internal keybaord status field
 	kbdchar		db	0	; the last character from keyboard
 	kbdarray	db	0, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '+', 0, 0x08
 			db 	0x9,	; (f) tab
