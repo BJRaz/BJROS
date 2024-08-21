@@ -105,17 +105,6 @@ void _putchar_new(char c)
 	}
 } 
 
-void* _memset(void* buffer, unsigned char c, int size) {
-	int idx = 0;
-	while(idx < size) 
-	{
-		*(unsigned char*)buffer = c;
-		idx++;
-		buffer++;
-	}
-	return buffer -= size;
-}
-
 int kprint(const char* text) {
 	//__asm__(".intel_syntax noprefix");
 	// __asm__("movl $0xaf4b2f4f,  0xb8008");

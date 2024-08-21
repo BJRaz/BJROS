@@ -1,4 +1,5 @@
 #include <console.h>
+#include <string.h>
 
 /*
  *	TODO: check for buffer overflow

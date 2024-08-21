@@ -1,16 +1,18 @@
 // Brian Juul Rasmussen 2020
 //
 #include <stdio.h>
-#include <include/string.h>
 #include <string.h>
 #include <stdint.h>
-#include <include/stdio.h>
+#include "include/libc/string.h"
+#include "include/libc/stdio.h"
+#include "include/kernel/console.h"
+
 #define DEBUG
 
 void printverylong();
 int _kprintf(const char* format, ...);
 void testuinttohex(uint32_t number);
-
+/*
 // TODO: optimize
 void* _memset(void* buffer, const unsigned char c, int size) {
 	int idx = 0;
@@ -21,16 +23,25 @@ void* _memset(void* buffer, const unsigned char c, int size) {
 	return buffer;
 }
 
-void callback(char* buf) {
-	_kprintf("Her: %s\n", buf); 
-}
 
 void prompt(void (*callback)(char*)) {
 	(*callback)("Hest");
 }
+*/
+
+void mycallback(char* buf) {
+	printf("Her: %s\n", buf); 
+}
 
 int main(int argc, char** argv) 
 {
+	
+	// misc tests
+	printverylong();
+	
+	testuinttohex(100);
+	return 0;
+/*
 	char s[2];
        	s[0] = 'B';
 	s[1] = 'r';
@@ -42,7 +53,7 @@ int main(int argc, char** argv)
 		puts("Equal strings");
 
 
-	prompt(callback);
+	prompt(mycallback);
 
 	char* text1 = "Brian tester: 0x%x, 0x%x hest\n";
 	_kprintf(text1, &st1, &st1);
@@ -82,14 +93,9 @@ int main(int argc, char** argv)
 	// test _utox (uint to hex)
 	char c = 'B';
 	_kprintf("c char: %c\n", c);
-	
-	// misc tests
-	printverylong();
-	
-	testuinttohex(100);
-
 	_kprintf("Her: %d\n", 200);
 	return result;
+	*/
 }
 
 void testuinttohex(uint32_t number)
@@ -108,6 +114,7 @@ void printverylong()
 	printf("Very long: %llu\n", verylong);
 }
 
+/*
 int _kprintf(const char* format, ...)
 {
 	int count = 0;
@@ -173,3 +180,4 @@ int _kprintf(const char* format, ...)
 	}
 	return count;
 }
+*/

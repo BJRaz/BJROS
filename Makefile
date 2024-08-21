@@ -1,5 +1,15 @@
 CC=gcc
-CFLAGS=-nostdinc -Wpadded -std=c99 -m32 -c -Wall -ffreestanding -fno-stack-protector -Iinclude -Imultiboot 
+CFLAGS=-nostdinc 		\
+	-Wpadded 		\
+	-std=c99 		\
+	-m32 			\
+	-c 			\
+	-Wall 			\
+	-ffreestanding 		\
+	-fno-stack-protector 	\
+	-Iinclude/kernel 	\
+	-Iinclude/libc 		\
+	-Imultiboot 
 AS=nasm
 ASFLAGS=-felf32 
 
@@ -9,17 +19,26 @@ ifeq ($(DEBUG), 1)
 endif
 
 ifeq ($(CC), clang)
-	CFLAGS := $(CFLAGS) -arch i386 -target i386-pc-none-elf -nobuiltininc	# clang specific option
+	CFLAGS := $(CFLAGS) -arch i386 			\
+			-target i386-pc-none-elf 	\
+			-v				\
+			-nobuiltininc	# clang specific option
 endif
 
 LD=ld
-LDFLAGS=-m elf_i386 -L bin -T linker.ld -static 
-#LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
-#-M 
-AS=nasm
-ASFLAGS=-felf32 #-Fdwarf   
-OBJDIR:=bin
-OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o console.o string.so kernel.o) 
+LDFLAGS=-m elf_i386 		\
+	-L bin 			\
+	-T linker.ld		\
+ 	-static 
+# **** 
+# C++ settings
+# LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
+# ****
+ 
+
+OBJDIR:=bin/x86
+OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so print.o console.o ps2.o kernel.o) 
+#OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o console.o string.so kernel.o) 
 BUILDDIR=build/x86
 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
@@ -39,22 +58,27 @@ $(OBJDIR)/%.o: %.c
 
 
 $(OBJDIR):
-	-mkdir $(OBJDIR) 
+	-mkdir -p $(OBJDIR) 
 $(BUILDDIR):
 	-mkdir -p $(BUILDDIR)
-$(BUILDDIR)/kernel.elf: $(OBJS) | $(BUILDDIR)  
+$(BUILDDIR)/kernel.elf: $(OBJS) $(OBJDIR)/libc.o | $(BUILDDIR)  
 	$(LD) $(LDFLAGS) $^ -o $(BUILDDIR)/kernel.elf
 	-mbchk $@
 clean:
 	-rm -f tests/test 
 	-rm -rf $(OBJDIR) $(BUILDDIR)
 	-cd grub2 && $(MAKE) clean
-TAGS:
+	-cd tests && $(MAKE) clean
+	-cd src/libc && $(MAKE) clean
+TAGS:	
 	ctags --exclude=kernel/k.c --exclude=jail/ -R .
-export CC OBJS OBJDIR
+export CC CFLAGS AS ASFLAGS OBJS OBJDIR
 
 .PHONY:	tests grub2
 
+$(OBJDIR)/libc.o: 
+	cd src/libc && $(MAKE)
+	cp src/libc/libc.o $(OBJDIR)/libc.o
 tests:	$(OBJS)	
 	cd tests && $(MAKE)
 grub2:	$(BUILDDIR)/kernel.elf

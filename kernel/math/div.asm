@@ -1,6 +1,7 @@
+# BJRAS: aug 2024, renamed _start to _start0
 section .text
-global _start
-_start:	
+global _start0
+_start0:	
 	mov	edi, 10b	; 2
 	mov	eax, 76 
 	mov	ebx, 0		; counter
