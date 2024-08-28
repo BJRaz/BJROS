@@ -3,12 +3,8 @@ JAIL=jail
 MOUNTPOINT=$(JAIL)/mnt
 MOUNTPOINTFD=$(JAIL)/mnt/floppy
 IMGHD=hdd.img
-IMGHDDGPT=hddgpt.img
 LODEVHD=/dev/mapper/loop0p1
 LODEV=/dev/loop0
-GRUBFLAGS=--target=i386-pc --locales=en@piglatin --fonts=ascii \
-	--install-modules="multiboot normal part_msdos ext2" \
-	--modules="multiboot normal part_msdos ext2" 
 BUILDDIR=../build/x86
 
 all:	grubhd 
@@ -19,9 +15,6 @@ $(JAIL):
 $(IMGHD):	 
 	dd if=/dev/zero of=$(IMGHD) bs=1024 count=30000				# makes a hdd image of size 30MB
 	parted $(IMGHD) mklabel msdos mkpart primary 1 30 set 1 boot on 	# partitions the image with partitionlabel msdos, with one partition 30MB and boot flag set 
-$(IMGHDDGPT):
-	dd if=/dev/zero of=$(IMGHDDGPT) bs=512 count=1000000			# makes a hdd image of size 512MB
-	parted $(IMGHDDGPT) mklabel gpt mkpart EFI 1 200 set 1 boot on 		# partitions the image with partitionlabel gpt, with one EFI partition 200MB and boot flag set
 grubhd:	$(IMGHD) $(JAIL) 
 	# assign partition(s) to loopback-device (dev/mapper/loop0p1)
 	kpartx -l $(IMGHD) 2>&1 
@@ -41,19 +34,6 @@ grubhd:	$(IMGHD) $(JAIL)
 	sync
 installhd: grubhd 
 	cp $(IMGHD) $(OUTPUTHD)	
-floppy:	kernel.elf $(IMG)
-	#losetup $(LODEV) $(IMG)
-	$(eval LODEV=$(shell losetup --show -f $(IMG)))
-	mkfs.ext2 -v $(LODEV) 
-	mount $(LODEV) $(MOUNTPOINTFD)
-	mkdir $(MOUNTPOINTFD)/boot
-	cp $(BUILDDIR)/kernel.elf $(MOUNTPOINTFD)
-	grub2-install --target=i386-pc $(GRUBFLAGS) --force --allow-floppy --boot-directory=$(MOUNTPOINTFD)/boot $(LODEV)
-	cp grub2/grub_floppy.cfg $(MOUNTPOINTFD)/boot/grub2/grub.cfg
-	umount $(MOUNTPOINTFD)
-	losetup -d $(LODEV)
-installfloppy: floppy
-	cp $(IMG) $(OUTPUT)
 testeval:
 	losetup -d $(LODEV)
 clean:

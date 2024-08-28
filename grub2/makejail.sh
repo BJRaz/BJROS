@@ -16,5 +16,6 @@ cp /bin/bash jail/bin
 cp /bin/ls jail/bin
 cp -R /usr/share/locale/en@piglatin jail/usr/share/locale
 cp grub2.sh jail/
+cp grub2efi.sh jail/
 cp -R /usr/sbin/grub2* jail/usr/sbin
 

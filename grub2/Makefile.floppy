@@ -1,0 +1,23 @@
+GRUBFLAGS=--target=i386-pc --locales=en@piglatin --fonts=ascii \
+	--install-modules="multiboot normal part_msdos ext2" \
+	--modules="multiboot normal part_msdos ext2" 
+MOUNTPOINTFD=$(JAIL)/mnt/floppy
+LODEV=/dev/loop0
+BUILDDIR=../build/x86
+
+all:	floppy
+
+floppy:	kernel.elf $(IMG)
+	#losetup $(LODEV) $(IMG)
+	$(eval LODEV=$(shell losetup --show -f $(IMG)))
+	mkfs.ext2 -v $(LODEV) 
+	mount $(LODEV) $(MOUNTPOINTFD)
+	mkdir $(MOUNTPOINTFD)/boot
+	cp $(BUILDDIR)/kernel.elf $(MOUNTPOINTFD)
+	grub2-install --target=i386-pc $(GRUBFLAGS) --force --allow-floppy --boot-directory=$(MOUNTPOINTFD)/boot $(LODEV)
+	cp grub2/grub_floppy.cfg $(MOUNTPOINTFD)/boot/grub2/grub.cfg
+	umount $(MOUNTPOINTFD)
+	losetup -d $(LODEV)
+installfloppy: floppy
+	cp $(IMG) $(OUTPUT)
+

@@ -53,6 +53,7 @@ global idt:data				; start of interrupt descriptor table
 global kbdchar:data			; keybaord char data 
 global kbdarray:data
 global kbdarray_upper:data
+global kbd_rb:data, kbd_rb_head:data, kbd_rb_tail:data
 
 section .text
 global _start
@@ -471,6 +472,8 @@ section .data
 	kbpressed	db	0
 	kbdstatus	db	0	; internal keybaord status field
 	kbdchar		db	0	; the last character from keyboard
+	kbd_rb_head 	db	0
+	kbd_rb_tail	db	0
 	kbdarray	db	0, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '+', 0, 0x08
 			db 	0x9,	; (f) tab
 			db 	'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 
@@ -542,7 +545,7 @@ align	4
 section .bss
 	cursor.x	resb	32	
 	cursor.y	resb	32
-
+	kbd_rb		resb	255
 
 ; ******
 ; GDT: this is the global descriptor table setup. The address for section .gdt is set via linker script
