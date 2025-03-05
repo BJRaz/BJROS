@@ -18,9 +18,10 @@ extern "C" {
 	void _clear();
 	void* _memset(void* buffer, unsigned char c, int size);
 	
-	int kprint(const char*);
+/*	int kprint(const char*);
 	int kprintln(const char*);
 	int kprintf(const char* format, ...);
+*/
 #ifdef __cplusplus
 }
 #endif

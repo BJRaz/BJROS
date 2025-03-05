@@ -10,9 +10,9 @@
 // input-routines 
 // cursor-routines
 //
-#include <stddef.h>
-#include <stdio.h>
-#include <string.h>
+#include <standard/stddef.h>
+#include <standard/stdio.h>
+#include <standard/string.h>
 
 #define VIDEO	0xB8000			// VGA color text buffer (mode 3)
 #define VIDEO_X	80

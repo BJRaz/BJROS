@@ -3,6 +3,7 @@
 
 #include <kernel.h>
 
+
 #define PS2_DATA	0x60			// i8042 ps/2 controller data port (r/w)
 #define PS2_CMD		0x64			// i8042 ps/2 status register (read), command register (write)
 

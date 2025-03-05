@@ -8,7 +8,6 @@ CFLAGS=-nostdinc 		\
 	-ffreestanding 		\
 	-fno-stack-protector 	\
 	-Iinclude/kernel 	\
-	-Iinclude/libc 		\
 	-Imultiboot 
 AS=nasm
 ASFLAGS=-felf32 
@@ -29,7 +28,7 @@ LD=ld
 LDFLAGS=-m elf_i386 		\
 	-L bin 			\
 	-T linker.ld		\
- 	-static 
+ 	-static -z muldefs 
 # **** 
 # C++ settings
 # LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
@@ -37,8 +36,8 @@ LDFLAGS=-m elf_i386 		\
  
 
 OBJDIR:=bin/x86
-OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so print.o console.o ps2.o kernel.o) 
-#OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so print.o console.o string.so kernel.o) 
+#OBJS:=$(addprefix $(OBJDIR)/, multiboot.so string.o cursor.so print.o console.o ps2.o kernel.o) 
+OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so strcmp.so print.o console.o string.o ps2.o kernel.o) 
 BUILDDIR=build/x86
 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
@@ -61,7 +60,7 @@ $(OBJDIR):
 	-mkdir -p $(OBJDIR) 
 $(BUILDDIR):
 	-mkdir -p $(BUILDDIR)
-$(BUILDDIR)/kernel.elf: $(OBJS) $(OBJDIR)/libc.o | $(BUILDDIR)  
+$(BUILDDIR)/kernel.elf: $(OBJS) | $(BUILDDIR)  
 	$(LD) $(LDFLAGS) $^ -o $(BUILDDIR)/kernel.elf
 	-mbchk $@
 clean:

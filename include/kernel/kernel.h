@@ -1,9 +1,10 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <standard/stdint.h>
+#include <standard/stddef.h>
+#include <standard/stdio.h>
+#include <standard/string.h>
 
 #define i_pushall 	__asm__("pushal");
 #define i_popall	__asm__("popal");
@@ -56,15 +57,12 @@ extern "C" {
 }
 #endif
 
-struct interrupt_gate_descriptor *idt_array;
-struct multiboot_info* mb_info;
 
 struct isrstackframe {
 	uint32_t EIP;
 	uint32_t CS;
 	uint32_t EFLAGS;
 };
-void* mv;						// pointer to the magicvalue
 
 // need the attribute packed, otherwise the alignment of short limit is 4 bytes
 // yielding a false value. When packed the alignment is 2 bytes  
