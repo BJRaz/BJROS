@@ -19,7 +19,6 @@ grubhd:	$(IMGHD) $(JAIL)
 	# assign partition(s) to loopback-device (dev/mapper/loop0p1)
 	$(eval LODEVHD=/dev/mapper/$(shell kpartx -av $(IMGHD) | grep -o 'loop[0-9]p1'))
 	$(eval LODEV=/dev/$(shell echo $(LODEVHD) | grep -o 'loop[0-9]'))
-	echo $(LODEV)
 	#kpartx -l $(IMGHD) 2>&1 
 	#kpartx -av $(IMGHD)
 	mkfs.ext2 $(LODEVHD)						# make filesystem on partition
@@ -28,7 +27,7 @@ grubhd:	$(IMGHD) $(JAIL)
 	-cp $(BUILDDIR)/kernel.elf $(MOUNTPOINT)/
 	mount --bind /proc $(JAIL)/proc
 	mount --bind /dev $(JAIL)/dev
-	-chroot $(JAIL) /grub2.sh
+	-chroot $(JAIL) /grub2.sh $(LODEV)
 	-cp -p grub.cfg $(MOUNTPOINT)/boot/grub2/
 	umount $(MOUNTPOINT)						# umount partition 
 	umount $(JAIL)/proc
