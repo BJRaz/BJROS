@@ -108,12 +108,17 @@ setup:
 mainhalt:
 	hlt				; halts cpus execution - wakesup on interrupts (nmi,external etc)
 	jmp	mainhalt		; needed to resume halt state after a interrupt/exception handlers 'iret' call
+
 ; *******
 ; VGA
 ; *******
 setup_vga:
 	mov	word [cursor.y], 8	; initialization of variables
 	mov	word [cursor.x], 0	; consider make them global
+	ret
+global _wait:function
+_wait:
+	hlt
 	ret
 global setcursor:function
 setcursor:

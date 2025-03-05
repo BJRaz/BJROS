@@ -10,7 +10,7 @@
 extern char kbdchar;
 extern char kbdarray[KBD_ARRAY_SIZE];
 extern char kbdarray_upper[KBD_ARRAY_SIZE];	
-
+extern void _wait();
 
 void* mv;						// pointer to the magicvalue
 struct interrupt_gate_descriptor *idt_array;

@@ -26,11 +26,11 @@ void ISR_FUNC isr_keyboard_handler(void *arg)
 	char scancode = inb(PS2_DATA);	
 	// ring buffer test code...
 	
-	if(kbd_rb_head < 255)
+	if(kbd_rb_head < 10)
 		kbd_rb[kbd_rb_head++] = scancode;
 	else
 		interrupt();
-//	kprintf("0x%x\n", command & 0b00000001);
+	// kprintf("0x%x\n", command & 0b00000001);
 	kprintf("0x%x, %x\n", scancode & 0x000000FF, &kbd_rb);
 	kprintf("EIP: 0x%x, CS: 0x%x, FLAGS: 0x%x\n", frame->EIP, frame->CS, frame->EFLAGS);
 
@@ -133,7 +133,7 @@ void setup_interrupts()
 	
 	// index 32-255 custom interrupt handlers starts here 	
 	set_isr_entry(idt_array, (uint32_t)&isr_timer); 			// slot (0) - system timer
-	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);		// slot (1) - keyboard PS/2
+	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);			// slot (1) - keyboard PS/2
 	//set_isr_entry(idt_array + 8, (uint32_t)&timer);			// slot (8) - Real time clock
 	set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse);			// slot (12) - mouse PS/2
 	set_isr_entry(idt_array + 13, (uint32_t)&isr);				// slot (13) - custom ISR for software INT test
