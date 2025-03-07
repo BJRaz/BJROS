@@ -317,8 +317,6 @@ interrupt:
 ; ***************************
 global isr_division_by_zero:function
 isr_division_by_zero:
-	;mov	esi,    text
-	;call	print
 	push	10
 	push	text3
 	call kprintf

@@ -30,7 +30,7 @@ void ISR_FUNC isr_keyboard_handler(void *arg)
 		kbd_rb[kbd_rb_head++] = scancode;
 	else
 		interrupt();
-	// kprintf("0x%x\n", command & 0b00000001);
+	
 	kprintf("0x%x, %x\n", scancode & 0x000000FF, &kbd_rb);
 	kprintf("EIP: 0x%x, CS: 0x%x, FLAGS: 0x%x\n", frame->EIP, frame->CS, frame->EFLAGS);
 
@@ -42,26 +42,9 @@ void ISR_FUNC isr_keyboard_handler(void *arg)
 }
 // test ISR
 // interrupt 2dH
+// Called from interrupt handler wrapper
 void ISR_FUNC isr_handler(uint32_t arg)
 {
-	// TODO: store all relevant regs in stack
-	// check stack segment etc.
-	//i_pushall;
-	//__asm__("mov $2, %eax");
-	//__asm__("mov %eax, %gs");	
-	//__asm__("pushl %eax");
-	/*kprintf("ISR args %d, %d\n", 22, 24);
-	kprintf("her: %d, %d, %x\n", 1, 2, 16);
-	char scancode = inb(0x60);	
-	kprintf("scan: %x\n", scancode);
-
-	if(scancode == 0x2a)
-		kprintf("Shift is pressed");
-
-	// remember to send EOI to PIC if used as a hardware-interrupt routine.
-	//i_popall ; TODO: somehow this doesn't work when run in emulator (sets ebp = 0x2)
-	__asm__("popl %eax");
-	*/
 //	i_cli;
 	uint32_t cs = arg;
 	uint32_t eip = *(&arg-1);
@@ -70,21 +53,9 @@ void ISR_FUNC isr_handler(uint32_t arg)
 	outb(PIC1_CMD, PIC_EOI);				// send EOI to PIC 1
 	outb(PIC2_CMD, PIC_EOI);				// send EOI to PIC 2
 //	i_sti;
-//	i_return;
+	i_return;
 }
 
-
-// called when division by zero occurs
-// type: exception, fault - thus stored eip 
-// is pointing to faulting instruction
-/*void ISR_FUNC isr_div_by_zero()
-{
-	//i_pushall;
-	kprintf("DIV BY ZERO Exception - system halted...");
-	halt;
-	//i_popall;
-	i_return;
-}*/
 
 // *******
 // Called from isr_mouse interrupt handler 
@@ -97,6 +68,7 @@ void ISR_FUNC isr_mouse_handler()
 	kprintf("mouse... 0x%x\n", response);
 	outb(PIC1_CMD, PIC_EOI);
 	outb(PIC2_CMD, PIC_EOI);
+	i_return;
 }
 
 void ISR_FUNC isr_general_protection_fault(void *arg) 
@@ -109,6 +81,7 @@ void ISR_FUNC isr_general_protection_fault(void *arg)
 	outb(PIC1_CMD, PIC_EOI);
 	outb(PIC2_CMD, PIC_EOI);
 	halt;
+	i_return;
 }
 
 void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t isr_address) 
@@ -128,14 +101,13 @@ void setup_interrupts()
 	set_isr_entry(idt_array, (uint32_t)&isr_division_by_zero);		// set division by zero interrupt service routine
 	idt_array += 13;
 	set_isr_entry(idt_array, (uint32_t)&isr_general_protection_fault);	
-	//set_isr_entry(idt_array, (uint32_t)&interrupt);	
 	idt_array += 19;							// set address past the first 32 entries which is reserved intel/cpu	
 	
 	// index 32-255 custom interrupt handlers starts here 	
 	set_isr_entry(idt_array, (uint32_t)&isr_timer); 			// slot (0) - system timer
 	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);			// slot (1) - keyboard PS/2
 	//set_isr_entry(idt_array + 8, (uint32_t)&timer);			// slot (8) - Real time clock
-	set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse);			// slot (12) - mouse PS/2
+	set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse_handler);			// slot (12) - mouse PS/2
 	set_isr_entry(idt_array + 13, (uint32_t)&isr);				// slot (13) - custom ISR for software INT test
 	
 }
