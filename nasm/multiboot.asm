@@ -434,7 +434,7 @@ isr_keyboard:
 global isr_custom:function			
 isr_custom: 
 	cli
-	push	esp
+	push	ebp
 	mov	ebp, esp
 	push	eax
 	push	ebx
@@ -450,7 +450,7 @@ isr_custom:
 	out	PIC1_CMD, al		; send EOI
 	pop	ebx	
 	pop	eax
-	pop	esp
+	pop	ebp
 	sti				; restore interrupts	
 	iret
 ; *******
