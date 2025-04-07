@@ -193,58 +193,6 @@ setup_pic:
 					; only IRQ12 (mouse) is allowed trough
 	out	PIC2_DATA, al		; 
 	ret
-; *******
-; IDT: setup interrupt handlers in IDT
-; *******
-setup_interrupts_internal:	
-	lea	eax, [isr_division_by_zero]
-	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], ax
-	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0x8
-	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 0
-	mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], 10001110b
-	rol	eax, 16
-	mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*DIV_ZERO)], ax
-	
-	lea	eax, [isr_timer]
-	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*TIMER)], ax
-	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*TIMER)], 0x8
-	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*TIMER)], 0
-	mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*TIMER)], 10001110b
-	rol	eax, 16
-	mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*TIMER)], ax
-
-	;lea	eax, [isr_keyboard]
-	;mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*KEYB)], ax
-	;mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*KEYB)], 0x8
-	;mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*KEYB)], 0
-	;mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*KEYB)], 10001110b
-	;rol	eax, 16
-	;mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*KEYB)], ax
-	
-	lea	eax, [isr_custom]
-	mov	word [idt+INT_DESCRIPTOR_OFFSETA+(INT_DESCRIPTOR_SIZE*CUSTOM)], ax
-	mov	word [idt+INT_DESCRIPTOR_SEGMENT+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0x8
-	mov	byte [idt+INT_DESCRIPTOR_FILL+(INT_DESCRIPTOR_SIZE*CUSTOM)], 0
-	mov	byte [idt+INT_DESCRIPTOR_FLAGS+(INT_DESCRIPTOR_SIZE*CUSTOM)], 10001110b
-	rol	eax, 16
-	mov	word [idt+INT_DESCRIPTOR_OFFSETB+(INT_DESCRIPTOR_SIZE*CUSTOM)], ax
-	
-	ret
-; *******
-; dummy kernel main function
-; *******
-_kmain:
-	; do some work (test only)
-	;mov 	dword [0xb8000],VIDEOTEXT ; writes text on screen	
-	mov	eax, 16			
-	;call 	disable_cursor
-	;mov	esi, text
-	;call 	print
-	mov	ax, 0			; y 
-	mov	bx, 80			; x
-	call	cursor
-	; do some out/in on vga mem to init cursor, and move cursor.
-	ret
 ; ********
 ; IN (b, w, d)
 ; ********
@@ -370,6 +318,9 @@ isr_timer:
 ; *  0x64   *      <-->      *  0x60   *
 ; *---------*                *---------*
 ; (Motherboard)              (keyboard)
+;
+; key press is called 'make', key release is called 'break'
+;
 ; ****************************
 global isr_keyboard:function
 isr_keyboard: 				
@@ -385,7 +336,6 @@ isr_keyboard:
 
 
 	in	al, PS2_DATA		; read scancode from keyboard buffer (the keyboard encoder)
-					; key press is called 'make', key release is called 'break'
 	
 .cont:
 	mov	ebx, eax		; store scancode - use stack ?

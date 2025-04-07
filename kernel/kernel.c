@@ -6,8 +6,8 @@
 #include <ps2.h>
 
 extern void interrupt();		// this function calls software interrupt
-extern char* kbd_rb;
-extern uint8_t kbd_rb_head, kbd_rb_tail;
+extern char* kbd_rb;			// keyboard ring buffer 
+extern uint8_t kbd_rb_head, kbd_rb_tail;// keyboard ring buffer head, and tail addresses
 
 	
 void callback(char*);
@@ -19,7 +19,7 @@ void recursive(int i);
 // 
 void ISR_FUNC isr_keyboard_handler(void *arg)
 {
-	struct isrstackframe *frame = (struct isrstackframe*)&arg-1;
+	struct isrstackframe *frame = ISRSTACK(&arg);
 	// TODO: store all relevant regs in stack
 	// check stack segment etc.
 	char command = inb(PS2_CMD);	
@@ -31,7 +31,7 @@ void ISR_FUNC isr_keyboard_handler(void *arg)
 	else
 		interrupt();
 	
-	kprintf("0x%x, %x\n", scancode & 0x000000FF, &kbd_rb);
+	kprintf("0x%x, 0x%x, %x\n", scancode, scancode & 0x000000FF, &kbd_rb);
 	kprintf("EIP: 0x%x, CS: 0x%x, FLAGS: 0x%x\n", frame->EIP, frame->CS, frame->EFLAGS);
 
 	if(scancode == 0x2a)
@@ -46,10 +46,8 @@ void ISR_FUNC isr_keyboard_handler(void *arg)
 void ISR_FUNC isr_handler(uint32_t arg)
 {
 //	i_cli;
-	uint32_t cs = arg;
-	uint32_t eip = *(&arg-1);
-	uint32_t eflags = *(&arg+1);
-	kprintf("Arg: CS, EIP and EFLAGS: 0x%x, 0x%x, 0x%x\n", cs, eip, eflags);
+	struct isrstackframe *frame = ISRSTACK(&arg);
+	kprintf("Arg: EIP, CS and EFLAGS: 0x%x, 0x%x, 0x%x, address cs: 0x%x\n", frame->EIP, frame->CS, frame->EFLAGS, &arg);
 	outb(PIC1_CMD, PIC_EOI);				// send EOI to PIC 1
 	outb(PIC2_CMD, PIC_EOI);				// send EOI to PIC 2
 //	i_sti;
@@ -73,11 +71,14 @@ void ISR_FUNC isr_mouse_handler()
 
 void ISR_FUNC isr_general_protection_fault(void *arg) 
 {
+
+	struct isrstackframe *frame = (struct isrstackframe*)(&arg-1);
 	kprintf("#GP(0) - GENERAL PROTECTION FAULT\n");
 	uint32_t cs = (uint32_t)arg;
 	uint32_t eip = (uint32_t)*(&arg+1);
 	uint32_t eflags = (uint32_t)*(&arg+2);
 	kprintf("Arg: CS, EIP and EFLAGS, args address: 0x%x, 0x%x, 0x%x, 0x%x\n", cs, eip, eflags, &arg);
+	kprintf("Arg: EIP, CS and EFLAGS: 0x%x, 0x%x, 0x%x, address cs: 0x%x\n", frame->EIP, frame->CS, frame->EFLAGS, &arg);
 	outb(PIC1_CMD, PIC_EOI);
 	outb(PIC2_CMD, PIC_EOI);
 	halt;
@@ -105,10 +106,10 @@ void setup_interrupts()
 	
 	// index 32-255 custom interrupt handlers starts here 	
 	set_isr_entry(idt_array, (uint32_t)&isr_timer); 			// slot (0) - system timer
-	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);			// slot (1) - keyboard PS/2
+	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);		// slot (1) - keyboard PS/2
 	//set_isr_entry(idt_array + 8, (uint32_t)&timer);			// slot (8) - Real time clock
-	set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse_handler);			// slot (12) - mouse PS/2
-	set_isr_entry(idt_array + 13, (uint32_t)&isr);				// slot (13) - custom ISR for software INT test
+	set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse_handler);		// slot (12) - mouse PS/2
+	set_isr_entry(idt_array + 13, (uint32_t)&isr_handler);			// slot (13) - custom ISR for software INT test
 	
 }
 
@@ -174,7 +175,7 @@ void test()
 {
 	int number = 32;
 	for(int i=0;i<number;i++){
-		kprintf("Number: %d\n", i);
+		kprintf("Number: %d", i);
 	}
 
 	int calculation = 10 / 0;

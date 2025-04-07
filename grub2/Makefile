@@ -1,4 +1,8 @@
-
+# This makefile initiates a jail (chroot) for further procession of grub2
+# to prevent curruption of the /boot system on the current system
+# An hdd image file is created and partitioned
+# The partition is initialized and set for boot
+# The image file is mounted and grub2-install is run in grub2.sh after prerequisites folders are binded
 JAIL=jail
 MOUNTPOINT=$(JAIL)/mnt
 MOUNTPOINTFD=$(JAIL)/mnt/floppy
@@ -36,8 +40,6 @@ grubhd:	$(IMGHD) $(JAIL)
 	sync
 installhd: grubhd 
 	cp $(IMGHD) $(OUTPUTHD)	
-testeval:
-	losetup -d $(LODEV)
 clean:
 	-rm -rf $(IMGHD) $(IMGHDGPT)	
 	-rm -rf $(JAIL)

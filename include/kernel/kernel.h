@@ -27,6 +27,8 @@
 
 #define ISR_FUNC	__attribute__((__section__(".isr")))
 #define PACKED		__attribute__ ((__packed__)) 
+#define ISRSTACK(a)	(struct isrstackframe*)(a-1);
+	
 
 #ifdef __cplusplus 
 
