@@ -85,8 +85,9 @@ void ISR_FUNC isr_general_protection_fault(void *arg)
 	i_return;
 }
 
-void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t isr_address) 
+void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const void* address) 
 {
+	uint32_t isr_address = (uint32_t)address;
 	idt_entry->offset_lo = (uint16_t)isr_address & 0xFFFF;
 	idt_entry->segment_selector = IDT_SEGMENT;
 	idt_entry->fill = IDT_FILL;
@@ -96,20 +97,17 @@ void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const uint32_t i
 
 void setup_interrupts() 
 {
-	// IDT stuff
-	// first 32 entries is reserved for processor.
+	// Interrupt descriptor table (IDT) setup
+	// indexes 0-31: entries are reserved for the processor.
 	idt_array = (struct interrupt_gate_descriptor*) &idt;
-	set_isr_entry(idt_array, (uint32_t)&isr_division_by_zero);		// set division by zero interrupt service routine
-	idt_array += 13;
-	set_isr_entry(idt_array, (uint32_t)&isr_general_protection_fault);	
-	idt_array += 19;							// set address past the first 32 entries which is reserved intel/cpu	
-	
-	// index 32-255 custom interrupt handlers starts here 	
-	set_isr_entry(idt_array, (uint32_t)&isr_timer); 			// slot (0) - system timer
-	set_isr_entry(idt_array + 1, (uint32_t)&isr_keyboard);		// slot (1) - keyboard PS/2
-	//set_isr_entry(idt_array + 8, (uint32_t)&timer);			// slot (8) - Real time clock
-	set_isr_entry(idt_array + 12, (uint32_t)&isr_mouse_handler);		// slot (12) - mouse PS/2
-	set_isr_entry(idt_array + 13, (uint32_t)&isr_handler);			// slot (13) - custom ISR for software INT test
+	set_isr_entry(&idt_array[0], &isr_division_by_zero);		// set division by zero exception (fault) service routine
+	set_isr_entry(&idt_array[13], &isr_general_protection_fault);	// set general protection fault service routine
+	// indexes 32-255: user defined custom interrupt handlers 	
+	set_isr_entry(&idt_array[32], &isr_timer); 			// slot (0) - system timer
+	set_isr_entry(&idt_array[33], &isr_keyboard);			// slot (1) - keyboard PS/2
+	//set_isr_entry(&idt_array[40], &timer);			// slot (8) - Real time clock
+	set_isr_entry(&idt_array[44], &isr_mouse_handler);		// slot (12) - mouse PS/2
+	set_isr_entry(&idt_array[45], &isr_handler);			// slot (13) - custom ISR for software INT test
 	
 }
 
@@ -126,6 +124,13 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 void showmbinfo() 
 {
 	kprintf("MB information flags: 0x%x\n", mb_info);
+	kprintf("multiboot info address: 0x%x\n", &mb_info); 
+	kprintf("multiboot info cmdline: %s\n", 
+		mb_info->cmdline);
+	kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
+		mb_info->mem_lower, 
+		mb_info->mem_upper);
+	kprintf("multiboot magic header %x\n", mv);
 }
 
 int sysinfo() 
@@ -134,39 +139,25 @@ int sysinfo()
 	kprintf("****** BJROS v0.2 ******\n");
 	char* text = "Welcome to BJROS ...\n";
 	len = kprint(text);
-	kprintf("multiboot info address: 0x%x\n", &mb_info); 
-	kprintf("multiboot info cmdline: %s\n", 
-		mb_info->cmdline);
-	kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
-		mb_info->mem_lower, 
-		mb_info->mem_upper);
-	kprintf("multiboot magic header %x\n", mv);
-
-#ifdef __cplusplus
-	Sysinfo s;	// = new Sysinfo();
-	kprintf("Sysinfo obj: %d\n", s.getTest());
-#endif
+	#ifdef __cplusplus
+		Sysinfo s;	// = new Sysinfo();
+		kprintf("Sysinfo obj: %d\n", s.getTest());
+	#endif
+	// IDT stuff
 	kprintf("PIC1: 0x%x\n", inb(PIC1_DATA));
 	kprintf("PIC2: 0x%x\n", inb(PIC2_DATA));
 
 	showidtinfo(idt_array);	
-	
 	kprintf("Interrupt gate descriptor baseaddress: 0x%x, %d\n", &idt, &idt);
-	
 	kprintf("ISR test (INT 45) address: 0x%x\n", &isr);
 	kprintf("ISR address div by zero: 0x%x\n", &isr_division_by_zero);
-
-
-	// gdt stuff:	
+	// GDT stuff:	
 	struct gdtr_register *gdtreg = (struct gdtr_register*) &gdtr;
-	
 	kprintf("GDTR address: 0x%x\n", &gdtr);
-
 	kprintf("GDTR limit value: 0x%x\n", gdtreg->limit);
-			
 	kprintf("GDTR baseaddress value: 0x%x\n", gdtreg->baseaddress);
-	// gdt stuff end
-
+	// Memory stuff
+	kprintf("MEMORY\n");
 	return len;
 
 }
