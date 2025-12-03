@@ -108,7 +108,6 @@ void setup_interrupts()
 	//set_isr_entry(&idt_array[40], &timer);			// slot (8) - Real time clock
 	set_isr_entry(&idt_array[44], &isr_mouse_handler);		// slot (12) - mouse PS/2
 	set_isr_entry(&idt_array[45], &isr_handler);			// slot (13) - custom ISR for software INT test
-	
 }
 
 void showidtinfo(const struct interrupt_gate_descriptor* idt_array) 
@@ -121,10 +120,11 @@ void showidtinfo(const struct interrupt_gate_descriptor* idt_array)
 	kprintf("IDT offset_hi: 0x%x\n", idt_array->offset_hi);
 }
 
+// Shows the multiboot info
 void showmbinfo() 
 {
-	kprintf("MB information flags: 0x%x\n", mb_info);
-	kprintf("multiboot info address: 0x%x\n", &mb_info); 
+	kprintf("MEMORY\n");
+	kprintf("multiboot info address: 0x%x\n", mb_info); 
 	kprintf("multiboot info cmdline: %s\n", 
 		mb_info->cmdline);
 	kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
@@ -157,7 +157,7 @@ int sysinfo()
 	kprintf("GDTR limit value: 0x%x\n", gdtreg->limit);
 	kprintf("GDTR baseaddress value: 0x%x\n", gdtreg->baseaddress);
 	// Memory stuff
-	kprintf("MEMORY\n");
+	showmbinfo();
 	return len;
 
 }

@@ -90,17 +90,18 @@ setup:
 					; and use conventional mem (about 30 kiB) - change address to higher mem area
 	mov	ebp, esp 	
 	
+	push	eax			; contains magic value (magic number)
+	push	ebx			; address of multiboot structure
+	
 	call 	setup_pic		; init of PIC (programmable interrupt controller)
 	call 	setup_interrupts	; setup interrupt service routines etc..
 	call	setup_ps2		; setup the PS/2 controller
-	
 	call 	setup_vga		; 	
 	
 	sti				; enable interrupts
 	
-	push	eax			; contains magic value (magic number)
-	push	ebx			; address of multiboot structure
 	call 	kmain			; call kernel main function (_kmain for testing)
+					; the arguments are added to stack above (eax, and ebx)
 
 	mov	eax, cs			; (test) stores visible content of Code Section to eax 
 					; at this point the value should be 0d (00000000 00001000) - 1 = index 8
@@ -160,6 +161,11 @@ setup_pic:
 	; ICWx -> Instruction Control Word
 	; OCWx -> Operation Control Word
 
+	push	ebp
+	mov	ebp, esp
+
+	pusha	
+
 	mov	al, 00010001b		; IWC1: bit 1 => ICW4 is needed
 	out	PIC1_CMD, al		; send ICW1 to PIC1 (master)
 	out	PIC2_CMD, al		; send ICW1 to PIC2 (slave)
@@ -192,6 +198,12 @@ setup_pic:
 	mov	al, 11101111b		; OCW1 interrupt mask = 11101111 
 					; only IRQ12 (mouse) is allowed trough
 	out	PIC2_DATA, al		; 
+	
+	popad
+	
+	mov	esp, ebp
+	pop	ebp
+
 	ret
 ; ********
 ; IN (b, w, d)

@@ -79,7 +79,7 @@ export CC CFLAGS AS ASFLAGS OBJS OBJDIR
 $(OBJDIR)/libc.o: 
 	cd src/libc && $(MAKE)
 	cp src/libc/libc.o $(OBJDIR)/libc.o
-tests:	$(OBJS)	
+tests:	$(OBJS) $(OBJDIR)/libc.o	
 	cd tests && $(MAKE)
 grub2:	$(BUILDDIR)/kernel.elf
 	cd grub2 && $(MAKE) #-f Makefile.grub2efi

@@ -46,5 +46,6 @@ for script in grub2.sh grub2efi.sh;do
 done
 
 cp -R /usr/sbin/grub2* jail/usr/sbin	;check_cp
+cp /usr/bin/grub2-mkrescue jail/bin	;check_cp
 
 exit 0
