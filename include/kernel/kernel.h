@@ -16,6 +16,7 @@
 #define IDT_SEGMENT	0x8
 #define IDT_FILL	0x0
 #define IDT_FLAGS	0x8e			// TODO: check this - aka 10001110b
+#define IDT_SIZE	0xFF			// size of interrupt descriptor table (256)
 
 #define PIC1_DATA	0x21
 #define PIC1_CMD	0x20
@@ -82,5 +83,9 @@ struct PACKED interrupt_gate_descriptor
 	uint8_t flags;
 	uint16_t offset_hi; 
 };
+
+void* mv;						// pointer to the magicvalue
+struct interrupt_gate_descriptor* idt_array;
+struct multiboot_info* mb_info;
 
 #endif

@@ -545,15 +545,10 @@ gdt:
 ; *******
 section .idt
 idt:
-		;dw	0x0034		; index 0, div by zero
-		;dw	0x0008
-		;db	0x0
-		;db	10001110b
-		;db	0x0011
-
-		times 256	dd 0	; fill with 0 untill entry index 32
+		times 256	dq 0	; fill each entry with 0 until vector 255 (note: dq for quad-word 64 bit)
+					; an entry is 8 bytes long.
 		
-		; entry index 32(0x20):	
+		; entry vector 32(0x20):	
 		;dw	0x01dc		; offset B
 		;dw	0x0008		; segment (code segment) 
 		;db	0x0		; fill bytes 

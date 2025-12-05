@@ -10,14 +10,14 @@ extern char* kbd_rb;			// keyboard ring buffer
 extern uint8_t kbd_rb_head, kbd_rb_tail;// keyboard ring buffer head, and tail addresses
 
 	
-void callback(char*);
+void callback(const char*);
 void test();
 void help();
 void recursive(int i);
 
 // Keyboard test ISR
 // 
-void ISR_FUNC isr_keyboard_handler(void *arg)
+void ISR_FUNC isr_keyboard_handler(const void *arg)
 {
 	struct isrstackframe *frame = ISRSTACK(&arg);
 	// TODO: store all relevant regs in stack
@@ -43,7 +43,7 @@ void ISR_FUNC isr_keyboard_handler(void *arg)
 // test ISR
 // interrupt 2dH
 // Called from interrupt handler wrapper
-void ISR_FUNC isr_handler(uint32_t arg)
+void ISR_FUNC isr_handler(const uint32_t arg)
 {
 //	i_cli;
 	struct isrstackframe *frame = ISRSTACK(&arg);
@@ -69,7 +69,7 @@ void ISR_FUNC isr_mouse_handler()
 	i_return;
 }
 
-void ISR_FUNC isr_general_protection_fault(void *arg) 
+void ISR_FUNC isr_general_protection_fault(const void *arg) 
 {
 
 	struct isrstackframe *frame = (struct isrstackframe*)(&arg-1);
@@ -85,29 +85,39 @@ void ISR_FUNC isr_general_protection_fault(void *arg)
 	i_return;
 }
 
-void set_isr_entry(struct interrupt_gate_descriptor *idt_entry, const void* address) 
+void set_isr_entry(const int vector, const void* routineaddress) 
 {
-	uint32_t isr_address = (uint32_t)address;
-	idt_entry->offset_lo = (uint16_t)isr_address & 0xFFFF;
-	idt_entry->segment_selector = IDT_SEGMENT;
-	idt_entry->fill = IDT_FILL;
-	idt_entry->flags = IDT_FLAGS;
-	idt_entry->offset_hi = (uint16_t)(isr_address >> 16) & 0xFFFF; 
+	if(vector > IDT_SIZE - 1)
+		return;	
+	if(routineaddress == NULL)
+		return;
+	struct interrupt_gate_descriptor *idt_entry = &idt_array[vector];
+	uint32_t isr_address 		= (uint32_t)routineaddress;
+	idt_entry->offset_hi 		= (uint16_t)(isr_address >> 16) & 0xFFFF; 
+	idt_entry->offset_lo 		= (uint16_t)isr_address & 0xFFFF;
+	idt_entry->segment_selector 	= IDT_SEGMENT;
+	idt_entry->fill 		= IDT_FILL;
+	idt_entry->flags 		= IDT_FLAGS;
 }
 
 void setup_interrupts() 
 {
 	// Interrupt descriptor table (IDT) setup
-	// indexes 0-31: entries are reserved for the processor.
+	// vectors 0-31: entries are reserved for the processor.
+	// NOTE: the idt variable is defined as global in the system
+	// and the address of the variable is equal to the start address of
+	// the .idt sector defined in the linker.ld script. 
+	// The memory space is pre-initialized with 0-values
+	
 	idt_array = (struct interrupt_gate_descriptor*) &idt;
-	set_isr_entry(&idt_array[0], &isr_division_by_zero);		// set division by zero exception (fault) service routine
-	set_isr_entry(&idt_array[13], &isr_general_protection_fault);	// set general protection fault service routine
+	set_isr_entry(0, &isr_division_by_zero);		// set division by zero exception (fault) service routine
+	set_isr_entry(13, &isr_general_protection_fault);	// set general protection fault service routine
 	// indexes 32-255: user defined custom interrupt handlers 	
-	set_isr_entry(&idt_array[32], &isr_timer); 			// slot (0) - system timer
-	set_isr_entry(&idt_array[33], &isr_keyboard);			// slot (1) - keyboard PS/2
-	//set_isr_entry(&idt_array[40], &timer);			// slot (8) - Real time clock
-	set_isr_entry(&idt_array[44], &isr_mouse_handler);		// slot (12) - mouse PS/2
-	set_isr_entry(&idt_array[45], &isr_handler);			// slot (13) - custom ISR for software INT test
+	set_isr_entry(32, &isr_timer); 				// slot (0) - system timer
+	set_isr_entry(33, &isr_keyboard);			// slot (1) - keyboard PS/2
+	//set_isr_entry(40, &timer);				// slot (8) - Real time clock
+	set_isr_entry(44, &isr_mouse_handler);			// slot (12) - mouse PS/2
+	set_isr_entry(45, &isr_handler);			// slot (13) - custom ISR for software INT test
 }
 
 void showidtinfo(const struct interrupt_gate_descriptor* idt_array) 
@@ -127,7 +137,7 @@ void showmbinfo()
 	kprintf("multiboot info address: 0x%x\n", mb_info); 
 	kprintf("multiboot info cmdline: %s\n", 
 		mb_info->cmdline);
-	kprintf("multiboot info memlower: 0x%x, memupper: 0x%x\n", 
+	kprintf("multiboot info memlower (decimal): %dkb, memupper: %dkb\n", 
 		mb_info->mem_lower, 
 		mb_info->mem_upper);
 	kprintf("multiboot magic header %x\n", mv);
@@ -136,9 +146,9 @@ void showmbinfo()
 int sysinfo() 
 {
 	int len = 0;
-	kprintf("****** BJROS v0.2 ******\n");
-	char* text = "Welcome to BJROS ...\n";
+	char* text = "****** BJROS v0.2 ******\nWelcome to BJROS ...\n";
 	len = kprint(text);
+	kprintf("HER: %d\n", len);
 	#ifdef __cplusplus
 		Sysinfo s;	// = new Sysinfo();
 		kprintf("Sysinfo obj: %d\n", s.getTest());
@@ -173,7 +183,7 @@ void test()
 	kprintf("Calc: %d\n", calculation);
 }
 
-void callback(char* buf) 
+void callback(const char* buf) 
 {
 	if(_strcmp("multiboot", buf) == 0)
 	{

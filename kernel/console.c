@@ -3,7 +3,7 @@
 /*
  *	TODO: check for buffer overflow
  * */
-void prompt(void (*readbuf)(char*)) {
+void prompt(void (*readbuf)(const char*)) {
 	char buf[BUFFERLEN];
 	char *pmt = "BJROS> ";
 	int len = _strlen(pmt);
