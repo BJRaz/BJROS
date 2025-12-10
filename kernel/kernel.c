@@ -88,9 +88,9 @@ void ISR_FUNC isr_general_protection_fault(const void *arg)
 void set_isr_entry(const int vector, const void* routineaddress) 
 {
 	if(vector > IDT_SIZE - 1)
-		return;	
+		interrupt();	
 	if(routineaddress == NULL)
-		return;
+		interrupt();
 	struct interrupt_gate_descriptor *idt_entry = &idt_array[vector];
 	uint32_t isr_address 		= (uint32_t)routineaddress;
 	idt_entry->offset_hi 		= (uint16_t)(isr_address >> 16) & 0xFFFF; 
@@ -171,6 +171,12 @@ int sysinfo()
 	return len;
 
 }
+
+void test2() 
+{
+	//char* str = malloc(sizeof(char*));
+	//printf("Her: %s\n", str);
+} 
 
 void test() 
 {

@@ -13,6 +13,7 @@
 ; - gdtr, ldtr: undefined.
 
 bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protected mode
+					; note: the directive should normally only be used for an image in binary format.
 ; *******
 ; interrupt definitions:
 ; *******
@@ -21,23 +22,41 @@ bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protec
 %define KEYB		0x9
 %define CUSTOM		0x2c
 
+
+; *******
+; Programmable Interrupt Controller definitions
+; *******
 %define PIC1_DATA	0x21		; master programmable interrupt controller (PIC) - data port
 %define PIC1_CMD	0x20		;  - command port	
 %define PIC2_DATA	0xa1		; PIC 2 - data port
 %define PIC2_CMD	0xa0		; PIC 2 - command port
 %define PIC_EOI		0x20		; End Of Interrupt
 
+
+; *******
+; PS2 definitions 
+; *******
 %define PS2_DATA	0x60		; i8042 ps/2 controller data port (r/w)
 %define PS2_CMD		0x64		; i8042 ps/2 status register (read), command register (write)
 
-
+; *******
+; Stack related definitions
+; ******
 %define STACK_SIZE	0x4000
+
+; *******
+; Video definitions
+; *******
 %define	VIDEO		0xb8000		; VIDEO address for text color mode
 %define VGA_ROWS	25
 %define	VGA_COLS	80
 %define VGA_BYTES_ROW	160		; in vga text mode 3 - 80x25 16 colors uses 2 bytes mem pr character
 
-extern kmain				; kmail is kernel main function ing if binary format.
+
+; *******
+; Externals 
+; *******
+extern kmain				; kmail is kernel main function.
 extern cursor
 extern print
 extern kprintf
@@ -47,6 +66,9 @@ extern setup_interrupts
 extern isr_mouse_handler
 extern isr_handler
 
+; *******
+; Globals
+; *******
 global gdtr:data
 global gdt:data
 global idt:data				; start of interrupt descriptor table
@@ -111,15 +133,20 @@ mainhalt:
 	jmp	mainhalt		; needed to resume halt state after a interrupt/exception handlers 'iret' call
 
 ; *******
+; Simple _wait function 
+; *******
+global _wait:function
+_wait:
+	hlt
+	ret
+
+
+; *******
 ; VGA
 ; *******
 setup_vga:
 	mov	word [cursor.y], 8	; initialization of variables
 	mov	word [cursor.x], 0	; consider make them global
-	ret
-global _wait:function
-_wait:
-	hlt
 	ret
 global setcursor:function
 setcursor:
@@ -191,7 +218,7 @@ setup_pic:
 	; 
 	; enable/disable IRQs
 	;				
-	mov	al, 11111001b		; OCW1 interrupt mask = 11111001 
+	mov	al, 11111000b		; OCW1 interrupt mask = 11111001 
 					; only IRQ1 (keyboard) and IRQ2 (slave pic) is allowed trough
 	out	PIC1_DATA, al		; write OCW1 to PIC1
 
@@ -205,10 +232,10 @@ setup_pic:
 	pop	ebp
 
 	ret
+
 ; ********
 ; IN (b, w, d)
 ; ********
-
 global inb:function
 inb:
 	push	ebp		; stack management
@@ -224,7 +251,6 @@ inb:
 ; ********
 ; OUT (b, w, d)
 ; ********
-
 global outb:function
 outb:
 	push	ebp		; store basepointer
@@ -239,6 +265,7 @@ outb:
 	mov	esp, ebp	; restore stack frame
 	pop	ebp
 	ret
+
 ; *******
 ; ISR: interrupt service routines
 ; Notice: is contained within own section
@@ -273,7 +300,7 @@ interrupt:
 	popad
 	ret
 ; ***************************
-; division by zero handler
+; Division by zero handler
 ; ***************************
 global isr_division_by_zero:function
 isr_division_by_zero:
@@ -284,7 +311,7 @@ isr_division_by_zero:
 					; calling the failing instruction (type fault)
 	iret
 ; ***************************
-; timer - handles the clockinterrupts
+; Timer - handles the clockinterrupts
 ; ***************************
 global isr_timer:function
 isr_timer:
@@ -322,7 +349,7 @@ isr_timer:
 	sti				; restore interrupts
 	iret
 ; ****************************
-; keyboard handler PS/2 (i8042)
+; Keyboard handler PS/2 (i8042)
 ; note: 
 ; I/O port 0x64 (write) is sent to the "motherboard"-controller 
 ; I/O port 0x60 (write) is sent to the "in-kbd-case"-controller
@@ -389,7 +416,7 @@ isr_keyboard:
 	sti				; restore interrupts		
 	iret
 ; *********************
-; custom (test) isr - declared global, and can be used in other modules
+; Custom (test) isr - declared global, and can be used in other modules
 ; *********************
 global isr_custom:function			
 isr_custom: 
@@ -414,7 +441,7 @@ isr_custom:
 	sti				; restore interrupts	
 	iret
 ; *******
-; data section
+; Data section
 ; *******
 section .data
 	MB_HEADER_MAGIC		equ	0x1badb002

@@ -71,7 +71,7 @@ clean:
 	-cd tests && $(MAKE) clean
 	-cd src/libc && $(MAKE) clean
 TAGS:	
-	ctags --exclude=kernel/k.c --exclude=jail/ -R .
+	ctags --exclude=multiboot/kernel.c --exclude=kernel/k.c --exclude=jail/ -R .
 export CC CFLAGS AS ASFLAGS OBJS OBJDIR
 
 .PHONY:	tests grub2

@@ -215,7 +215,7 @@ static void itoa (char *buf, int base, int d)
 }
 
 /* Put the character C on the screen. */
-static void putchar (int c)
+/*static void putchar (int c)
 {
 	if (c == '\n' || c == '\r')
 	{
@@ -233,7 +233,7 @@ static void putchar (int c)
 	xpos++;
 	if (xpos >= COLUMNS)
 		goto newline;
-}
+}*/
 
 /* Format a string and print it on the screen, just like the libc
 function printf. */
@@ -284,6 +284,6 @@ void printf (const char *format, ...)
 
 void test() 
 {
-	//char* str = malloc(sizeof(char*));
-	//printf("Her: %s\n", str);
+	char* str = malloc(sizeof(char*));
+	printf("Her: %s\n", str);
 } 
