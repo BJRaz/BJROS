@@ -83,9 +83,4 @@ struct PACKED interrupt_gate_descriptor
 	uint8_t flags;
 	uint16_t offset_hi; 
 };
-
-void* mv;						// pointer to the magicvalue
-struct interrupt_gate_descriptor* idt_array;
-struct multiboot_info* mb_info;
-
 #endif

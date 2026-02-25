@@ -15,6 +15,11 @@ void test();
 void help();
 void recursive(int i);
 
+void* mv;						// pointer to the magicvalue
+struct interrupt_gate_descriptor* idt_array;
+struct multiboot_info* mb_info;
+
+
 // Keyboard test ISR
 // 
 void ISR_FUNC isr_keyboard_handler(const void *arg)
