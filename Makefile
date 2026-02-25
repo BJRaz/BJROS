@@ -30,7 +30,7 @@ LDFLAGS=-m elf_i386 		\
 	-L bin 			\
 	-T linker.ld		\
  	-static  		\
-	-z muldefs	
+#	-z muldefs	
 # **** 
 # C++ settings
 # LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 

@@ -14,6 +14,9 @@ extern char* kbd_rb;
 extern uint8_t kbd_rb_head, kbd_rb_tail;
 
 	
+void* mv;						// pointer to the magicvalue
+struct interrupt_gate_descriptor *idt_array;
+struct multiboot_info* mb_info;
 void callback(char*);
 void test();
 void help();
