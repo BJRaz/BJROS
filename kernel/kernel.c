@@ -23,7 +23,7 @@ void recursive(int i);
 // 
 void ISR_FUNC isr_keyboard_handler(void *arg)
 {
-	struct isrstackframe *frame = &arg-1;
+	struct isrstackframe *frame = (struct isrstackframe*)&arg-1;
 	// TODO: store all relevant regs in stack
 	// check stack segment etc.
 	char command = inb(PS2_CMD);	
@@ -106,9 +106,9 @@ void ISR_FUNC isr_mouse_handler()
 void ISR_FUNC isr_general_protection_fault(void *arg) 
 {
 	kprintf("#GP(0) - GENERAL PROTECTION FAULT\n");
-	uint32_t cs = arg;
-	uint32_t eip = *(&arg+1);
-	uint32_t eflags = *(&arg+2);
+	uint32_t cs = (uint32_t)arg;
+	uint32_t eip = (uint32_t)*(&arg+1);
+	uint32_t eflags = (uint32_t)*(&arg+2);
 	kprintf("Arg: CS, EIP and EFLAGS, args address: 0x%x, 0x%x, 0x%x, 0x%x\n", cs, eip, eflags, &arg);
 	outb(PIC1_CMD, PIC_EOI);
 	outb(PIC2_CMD, PIC_EOI);
