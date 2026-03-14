@@ -79,12 +79,22 @@ $(OBJDIR):
 $(BUILDDIR):
 	-mkdir -p $(BUILDDIR)
 
+OS := $(shell uname -s)
+
+# On Linux we must call the linker (ld) explicitly; using the compiler driver
+# (`cc`) as the linker injects host libraries like -lc which breaks kernel linking.
+ifeq ($(OS),Linux)
+LINKER := $(LD)
+LINKFLAGS := $(LD_ARCH_FLAG) $(LD_FLAGS)
+else
+# On non-Linux (macOS) prefer the cross-linker when available, otherwise use CC
 ifeq ($(shell basename $(LD)),i386-elf-ld)
 LINKER := $(LD)
 LINKFLAGS := $(LD_ARCH_FLAG) $(LD_FLAGS)
 else
 LINKER := $(CC)
 LINKFLAGS := $(LINK_CC_ARCH) $(LD_FLAGS)
+endif
 endif
 
 $(BUILDDIR)/kernel.elf: $(OBJS) | $(BUILDDIR)
