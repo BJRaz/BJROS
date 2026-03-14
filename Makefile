@@ -76,12 +76,14 @@ $(BUILDDIR):
 $(BUILDDIR)/kernel.elf: $(OBJS) | $(BUILDDIR)  
 	# Use LD directly if it's an i386-elf linker; otherwise use CC but drop the
 	# `-m elf_i386` ld-only flag which confuses the compiler driver.
-	@case "$(LD)" in \
-		*i386-elf-ld*) \
-			$(LD) $(LDFLAGS) $^ -o $(BUILDDIR)/kernel.elf ;; \
-		*) \
-			$(CC) $(filter-out -m elf_i386,$(LDFLAGS)) $^ -o $(BUILDDIR)/kernel.elf ;; \
-		esac
+#	@case "$(LD)" in \
+#		*i386-elf-ld*) \
+#			$(LD) $(LDFLAGS) $^ -o $(BUILDDIR)/kernel.elf ;; \
+#		*) \
+#			$(CC) $(filter-out -m elf_i386,$(LDFLAGS)) $^ -o $(BUILDDIR)/kernel.elf ;; \
+#		esac
+	
+	$(LD) $(LDFLAGS) $^ -o $(BUILDDIR)/kernel.elf 
 	-mbchk $@
 clean:
 	-rm -f tests/test 
