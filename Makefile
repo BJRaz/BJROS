@@ -37,11 +37,16 @@ ifeq ($(LD),ld)
 		LD := i386-elf-ld
 	endif
 endif
-LDFLAGS=-m elf_i386 		\
-	-L bin 			\
-	-T linker.ld		\
- 	-static 		\
-	-z muldefs 
+LD_ARCH_FLAG = -m elf_i386
+LD_FLAGS = -L bin \
+	-T linker.ld \
+	-static \
+	-z muldefs
+
+# When linking with the compiler driver we need an architecture flag suitable
+# for gcc (use -m32); when using the raw cross-linker we use the ld-specific
+# `-m elf_i386` flag.
+LINK_CC_ARCH = -m32
 # **** 
 # C++ settings
 # LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
@@ -76,10 +81,10 @@ $(BUILDDIR):
 
 ifeq ($(shell basename $(LD)),i386-elf-ld)
 LINKER := $(LD)
-LINKFLAGS := $(LDFLAGS)
+LINKFLAGS := $(LD_ARCH_FLAG) $(LD_FLAGS)
 else
 LINKER := $(CC)
-LINKFLAGS := $(filter-out -m elf_i386,$(LDFLAGS))
+LINKFLAGS := $(LINK_CC_ARCH) $(LD_FLAGS)
 endif
 
 $(BUILDDIR)/kernel.elf: $(OBJS) | $(BUILDDIR)
