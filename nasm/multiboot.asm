@@ -13,6 +13,7 @@
 ; - gdtr, ldtr: undefined.
 
 bits 32					; forces nasm to generate a 32-bit image for 32-bit processor protected mode
+extern console_input_try_enqueue
 					; note: the directive should normally only be used for an image in binary format.
 ; *******
 ; interrupt definitions:
@@ -65,7 +66,10 @@ extern setup_ps2
 extern setup_interrupts
 extern isr_mouse_handler
 extern isr_handler
-
+	; enqueue translated char into kernel console input buffer (ISR-safe)
+	push eax
+	call console_input_try_enqueue
+	add esp, 4
 ; *******
 ; Globals
 ; *******

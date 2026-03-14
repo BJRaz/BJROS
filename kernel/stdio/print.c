@@ -13,6 +13,7 @@
 #include <standard/stddef.h>
 #include <standard/stdio.h>
 #include <standard/string.h>
+#include <console.h>
 
 #define VIDEO	0xB8000			// VGA color text buffer (mode 3)
 #define VIDEO_X	80
@@ -36,7 +37,11 @@ void _clear()
 
 char _getchar(void) {
 	while(kbdchar==0)
-		_wait();	// TODO: busy wait - refactor! 	
+		{
+			/* process deferred console input/output to populate kbdchar */
+			console_process();
+			_wait();	/* TODO: busy wait - refactor! */
+		}
 	char result = kbdchar;
 	kbdchar = 0;
 	return result;
@@ -114,14 +119,14 @@ int kprint(const char* text) {
 	for(;i<_strlen(text);i++)
 	{
 		char c = text[i];
-		_putchar(c);		
-	}	
+		console_putc(c);
+	}   
 	return i;	
 }
 
 int kprintln(const char* text) {
 	int i =	kprint(text);
-	_putchar('\n');
+	console_putc('\n');
 	return i+1;	
 }
 
@@ -180,7 +185,7 @@ int kprintf(const char* format, ...)
 					case 'c':
 					{
 						char c = *(char*)args;
-						_putchar(c);
+						console_putc(c);
 						args = 4 + (char*)args;
 						format++;
 					}
@@ -188,8 +193,8 @@ int kprintf(const char* format, ...)
 				}
 			break;
 		}
-		if(*format != '\0'){		
-			_putchar(*format);	
+		if(*format != '\0'){       
+			console_putc(*format);    
 			format++;
 			count++;
 		} else

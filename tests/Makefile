@@ -1,10 +1,21 @@
 vpath %.h ../include
-#OBJS:=$(addprefix ../$(OBJDIR)/, multiboot.so cursor.so print.o console.o ps2.o kernel.o) 
-OBJS:=$(addprefix ../$(OBJDIR)/, libc.o) 
 
-#
-tests:	stdio/itoa.c $(OBJS)  
-	#$(CC) -m32 -g -I.. -o test $(filter-out ../$(OBJDIR)/multiboot.so ../$(OBJDIR)/kernel.o, $^) 
-	$(CC) -m32 -I.. -g stdio/itoa.c -o test $(OBJS) 
+CC ?= gcc
+
+LIBC_DIR = ../src/libc
+
+all: itoa_test memset_test
+
+libc: 
+	cd $(LIBC_DIR) && $(MAKE)
+
+INCLUDES = -I.. -I../include/kernel -I../include/libc
+
+itoa_test: libc stdio/itoa.c
+	$(CC) -m32 $(INCLUDES) -g stdio/itoa.c -o itoa_test $(LIBC_DIR)/libc.a
+
+memset_test: libc tests/libc/string_memset_test.c
+	$(CC) -m32 $(INCLUDES) -g tests/libc/string_memset_test.c -o memset_test $(LIBC_DIR)/libc.a
+
 clean:
-	-rm test
+	-rm -f itoa_test memset_test

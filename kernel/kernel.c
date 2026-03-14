@@ -22,22 +22,15 @@ void ISR_FUNC isr_keyboard_handler(const void *arg)
 	struct isrstackframe *frame = ISRSTACK(&arg);
 	// TODO: store all relevant regs in stack
 	// check stack segment etc.
-	char command = inb(PS2_CMD);	
-	char scancode = inb(PS2_DATA);	
-	// ring buffer test code...
-	
-	if(kbd_rb_head < 10)
-		kbd_rb[kbd_rb_head++] = scancode;
-	else
-		interrupt();
-	
-	kprintf("0x%x, 0x%x, %x\n", scancode, scancode & 0x000000FF, &kbd_rb);
-	kprintf("EIP: 0x%x, CS: 0x%x, FLAGS: 0x%x\n", frame->EIP, frame->CS, frame->EFLAGS);
-
-	if(scancode == 0x2a)
-		kprintf("Shift is pressed");
-	outb(PIC1_CMD, PIC_EOI);				// send EOI to PIC 1
-	outb(PIC2_CMD, PIC_EOI);				// send EOI to PIC 2
+	/* minimal ISR: read scancode and enqueue to console input buffer (non-blocking) */
+	(void)frame; /* silence unused */
+	uint8_t command = inb(PS2_CMD);
+	uint8_t scancode = inb(PS2_DATA);
+	/* attempt to enqueue; drop-new policy handled by console */
+	console_input_try_enqueue((int)scancode);
+	/* acknowledge PICs */
+	outb(PIC1_CMD, PIC_EOI);
+	outb(PIC2_CMD, PIC_EOI);
 	i_return;
 }
 // test ISR
@@ -247,10 +240,12 @@ extern "C" {
 	{
 		mb_info = multiboot_structure;
 		mv = magicvalue;
-		_clear();		
+		_clear();
+		/* initialize buffered console (spinlocks + buffers) */
+		console_init();
 		prompt(callback);
 		
-		return 0;	
+		return 0; 
 	}
 #ifdef __cplusplus
 }

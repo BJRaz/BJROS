@@ -1,4 +1,11 @@
-CC=gcc
+CC ?= i386-elf-gcc
+# If the environment default compiler is 'cc' (macOS) but an i386-elf cross
+# compiler is available in PATH, prefer it so plain `make` works for cross-builds.
+ifeq ($(CC),cc)
+	ifneq ($(shell command -v i386-elf-gcc 2>/dev/null),)
+		CC := i386-elf-gcc
+	endif
+endif
 CFLAGS=-nostdinc 		\
 	-Wpadded 		\
 	-std=c99 		\
@@ -24,7 +31,12 @@ ifeq ($(CC), clang)
 			-nobuiltininc	# clang specific option
 endif
 
-LD=ld
+LD ?= i386-elf-ld
+ifeq ($(LD),ld)
+	ifneq ($(shell command -v i386-elf-ld 2>/dev/null),)
+		LD := i386-elf-ld
+	endif
+endif
 LDFLAGS=-m elf_i386 		\
 	-L bin 			\
 	-T linker.ld		\
@@ -38,7 +50,7 @@ LDFLAGS=-m elf_i386 		\
 
 OBJDIR:=bin/x86
 #OBJS:=$(addprefix $(OBJDIR)/, multiboot.so string.o cursor.so print.o console.o ps2.o kernel.o) 
-OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so strcmp.so print.o console.o string.o ps2.o kernel.o) 
+OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so strcmp.so print.o console.o string.o ps2.o spinlock.o kernel.o) 
 BUILDDIR=build/x86
 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
@@ -62,7 +74,14 @@ $(OBJDIR):
 $(BUILDDIR):
 	-mkdir -p $(BUILDDIR)
 $(BUILDDIR)/kernel.elf: $(OBJS) | $(BUILDDIR)  
-	$(LD) $(LDFLAGS) $^ -o $(BUILDDIR)/kernel.elf
+	# Use LD directly if it's an i386-elf linker; otherwise use CC but drop the
+	# `-m elf_i386` ld-only flag which confuses the compiler driver.
+	@case "$(LD)" in \
+		*i386-elf-ld*) \
+			$(LD) $(LDFLAGS) $^ -o $(BUILDDIR)/kernel.elf ;; \
+		*) \
+			$(CC) $(filter-out -m elf_i386,$(LDFLAGS)) $^ -o $(BUILDDIR)/kernel.elf ;; \
+		esac
 	-mbchk $@
 clean:
 	-rm -f tests/test 
@@ -70,8 +89,10 @@ clean:
 	-cd grub2 && $(MAKE) clean
 	-cd tests && $(MAKE) clean
 	-cd src/libc && $(MAKE) clean
-TAGS:	
-	ctags --exclude=multiboot/kernel.c --exclude=kernel/k.c --exclude=jail/ -R .
+TAGS:
+	@# Try to generate tags; prefer long-option ctags, but fall back to simple recursive ctags
+	@ctags --exclude=multiboot/kernel.c --exclude=kernel/k.c --exclude=jail/ -R . 2>/dev/null || \
+	ctags -R . 2>/dev/null || true
 export CC CFLAGS AS ASFLAGS OBJS OBJDIR
 
 .PHONY:	tests grub2
