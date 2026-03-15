@@ -1,7 +1,16 @@
 AS = nasm
 ASFLAGS = -felf32
 CC ?= gcc
-CFLAGS = -nostdinc -Wpadded -std=c99 -m32 -Wall -ffreestanding -fno-stack-protector -I../../include/libc
+CFLAGS = -nostdinc \
+    -Wpadded \
+    -std=c99 \
+    -m32 \
+    -Wall \
+    -ffreestanding \
+    -fno-stack-protector \
+    -I../../include \
+    -I../../include/kernel \
+    -I../../include/libc
 
 OBJS = string.o strlen.o utoa.o utox.o itoa.o atou.o atoi.o
 
