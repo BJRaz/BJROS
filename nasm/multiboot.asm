@@ -99,8 +99,6 @@ multiboot_entry:
 	lgdt	[gdtr]			; load global descriptor table register with 6 byte memory value
 	lidt	[idtr]			; load interrupt descriptor table register with 6 byte memory value
 
-	jmp 	mainhalt
-	
 	jmp	0x8:setup		; sets CS (code segment) to 0x8
 setup:
 	mov	cx, 0x10

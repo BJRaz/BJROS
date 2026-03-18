@@ -82,4 +82,4 @@ $(OBJDIR)/libc.o:
 tests:	$(OBJS) $(OBJDIR)/libc.o	
 	cd tests && $(MAKE)
 grub2:	$(BUILDDIR)/kernel.elf
-	cd grub2 && $(MAKE) -f Makefile.grub2 #-f Makefile.grub2efi
+	cd grub2 && $(MAKE) #-f Makefile.grub2efi
