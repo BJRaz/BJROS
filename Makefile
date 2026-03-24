@@ -6,16 +6,16 @@ ifeq ($(CC),cc)
 		CC := i386-elf-gcc
 	endif
 endif
-CFLAGS=-nostdinc 		\
-	-Wpadded 		\
-	-std=c99 		\
-	-m32 			\
-	-c 			\
-	-Wall 			\
-	-ffreestanding 		\
+CFLAGS=-nostdinc 			\
+	-Wpadded 				\
+	-std=c99 				\
+	-m32 					\
+	-c 						\
+	-Wall 					\
+	-ffreestanding 			\
 	-fno-stack-protector 	\
-	-Iinclude/kernel 	\
-	-Imultiboot 
+	-Iinclude/kernel 		\
+	-Iinclude/multiboot 	
 AS=nasm
 ASFLAGS=-felf32 
 
@@ -25,9 +25,9 @@ ifeq ($(DEBUG), 1)
 endif
 
 ifeq ($(CC), clang)
-	CFLAGS := $(CFLAGS) -arch i386 			\
+	CFLAGS := $(CFLAGS) -arch i386 		\
 			-target i386-pc-none-elf 	\
-			-v				\
+			-v							\
 			-nobuiltininc	# clang specific option
 endif
 
@@ -59,11 +59,11 @@ OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so uto
 BUILDDIR=build/x86
 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
-vpath %.h include					# search for specific filetypes in <dir>
+vpath %.h include 								# search for specific filetypes in <dir>
 
 all: $(BUILDDIR)/kernel.elf TAGS
 
-$(OBJS): | $(OBJDIR)					# order-only prerequisite
+$(OBJS): | $(OBJDIR)							# order-only prerequisite
 
 # had to make this rule match *.so (shared object) 
 # when referencing assembly files
@@ -108,7 +108,7 @@ clean:
 	-cd tests && $(MAKE) clean
 	-cd src/libc && $(MAKE) clean
 TAGS:	
-	ctags --exclude=multiboot/kernel.c --exclude=kernel/k.c --exclude=jail/ -R .
+	ctags --exclude=kernel/k.c --exclude=jail/ -R .
 export CC CFLAGS AS ASFLAGS OBJS OBJDIR
 
 .PHONY:	tests grub2
