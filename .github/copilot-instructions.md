@@ -26,7 +26,10 @@ cd tests && ./test  # Run tests manually after building
 
 **Serial Console:** Kernel outputs to COM1 (0x3F8) and mirrors VGA text to serial. GRUB also outputs to serial. In headless mode, all kernel output appears on stdout.
 
-Toolchain: `gcc -m32 -nostdinc -ffreestanding -fno-stack-protector`, `nasm -felf32`, `ld -m elf_i386`.
+**Toolchain:** Prefers `i386-elf-gcc` and `i386-elf-ld` cross-compilers if available in PATH. Falls back to host `gcc` and `ld`. On Linux, always uses `ld` directly to avoid libc injection. On macOS, uses compiler driver (`cc`) if cross-linker unavailable.
+- Compilation: `gcc -m32 -nostdinc -ffreestanding -fno-stack-protector`
+- Assembly: `nasm -felf32`
+- Linking: `ld -m elf_i386` (or `gcc -m32` as fallback)
 
 ## Architecture
 
