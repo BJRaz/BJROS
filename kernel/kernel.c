@@ -245,11 +245,9 @@ extern "C" {
 		kprintln("BJROS microkernel started.");
 		kprintln("Console process created (PID 1).");
 
-		/* Fall through to idle — scheduler takes over via timer ISR */
+		/* Scheduler takes over via timer ISR.
+		 * Return to mainhalt: in multiboot.asm (hlt + jmp loop). */
 		i_sti;
-		for (;;)
-			halt;
-		
 		return 0;	
 	}
 #ifdef __cplusplus
