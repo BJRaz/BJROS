@@ -8,5 +8,6 @@ bin/
 jail/
 build/
 grub2/iso
+grub2/os.iso
 *.img
 

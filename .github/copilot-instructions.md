@@ -18,10 +18,13 @@ cd tests && ./test  # Run tests manually after building
 ```
 
 ```bash
-./scripts/run-qemu-iso.sh             # Boot ISO in QEMU
+./scripts/run-qemu-iso.sh             # Boot ISO in QEMU (headless, serial to stdout)
+./scripts/run-qemu-iso.sh --gui       # Boot with GUI display
 ./scripts/run-qemu-iso.sh --gdb       # Boot with GDB stub (for remote debugging)
 ./scripts/run-qemu-iso.sh --iso PATH  # Use a custom ISO path
 ```
+
+**Serial Console:** Kernel outputs to COM1 (0x3F8) and mirrors VGA text to serial. GRUB also outputs to serial. In headless mode, all kernel output appears on stdout.
 
 Toolchain: `gcc -m32 -nostdinc -ffreestanding -fno-stack-protector`, `nasm -felf32`, `ld -m elf_i386`.
 
@@ -42,6 +45,7 @@ Boot flow: GRUB2 → `nasm/multiboot.asm` (multiboot header, entry point) → `k
 - `nasm/boundaries.asm` — exposes kernel memory boundary symbols
 - `kernel/k.c` — `kmain`: GDT/IDT init, PIC (8259) config, ISR wiring, main loop
 - `kernel/console.c` — VGA text mode driver (0xB8000), 80×25, basic input prompt
+- `kernel/serial.c` — COM1 (0x3F8) serial driver; mirrors kernel output to serial port
 - `kernel/ps2.c` — PS/2 controller init (keyboard + mouse); ports 0x60/0x64
 - `kernel/stdio/` — `kprintf`, `kprintln`, integer/string conversions
 - `src/libc/` — freestanding libc (string, stdio); used by tests and kernel
@@ -80,3 +84,11 @@ while (inb(PS2_CMD) & 0x2) {}  // wait for input buffer empty
 **Headers:** Kernel headers live in `include/kernel/` and `include/kernel/standard/`. Libc headers are in `include/libc/`. The compiler is invoked with `-Iinclude/kernel -Imultiboot`.
 
 **Tests** are standalone host binaries (compiled without `-ffreestanding`) that test `src/libc/` functions in isolation. They are not run inside the kernel or QEMU.
+
+## Debugging & Tools
+
+**MCP Server** (`tools/mcp-qemu/`): A Model Context Protocol server that exposes QEMU and GDB control to AI assistants. Includes:
+- QEMU tools: `start`, `stop`, `status`, `serial_read`, `send_key`, `monitor`
+- GDB tools: `connect`, `continue`, `interrupt`, `break`, `delete_breakpoint`, `breakpoints`, `step`, `step_instruction`, `next`, `next_instruction`, `registers`, `memory`, `backtrace`, `disassemble`, `symbols`, `eval`
+
+Dependencies: `mcp` (MCP SDK), `pygdbmi` (GDB/MI parser). See `tools/mcp-qemu/README.md` for setup and usage.
