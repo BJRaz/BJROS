@@ -154,10 +154,16 @@ int sysinfo()
 
 }
 
-void test2() 
+void test_malloc() 
 {
-	//char* str = malloc(sizeof(char*));
-	//printf("Her: %s\n", str);
+	char* str = _malloc(sizeof(char*));
+	kprintf("malloc returned: 0x%x\n", str);
+	if (str) {
+		str[0] = 'H'; str[1] = 'i'; str[2] = '\0';
+		kprintf("String: %s\n", str);
+		_free(str);
+		kprintf("free OK\n");
+	}
 } 
 
 void test() 
@@ -190,6 +196,10 @@ void callback(const char* buf)
 	{	
 		test();return;
 	}
+	if(_strcmp("test_malloc", buf) == 0)
+	{	
+		test_malloc();return;
+	}
 	if(_strcmp("sysinfo", buf) == 0)
 	{	
 		sysinfo();return;
@@ -211,6 +221,7 @@ void help()
 	kprintln("int - calls software interrupt");
 	kprintln("multiboot - shows multiboot parameters");
 	kprintln("test - test program");
+	kprintln("test_malloc - test heap allocator");
 	kprintln("sysinfo - show system info");
 	kprintln("clear - clears screen");
 	kprintln("help - this help..");
