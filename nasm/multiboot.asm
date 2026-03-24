@@ -351,18 +351,6 @@ isr_timer:
 					; TODO: this leeds to inaccurate timing as PIT ticks at 18.2 times a second
 					; if used to represent time-ticks
 	div	ebx			; qoutient = eax, remainder = edx .. explain
-	cmp	edx, 0
-	jne	.end
-	mov	ebx, eax
-	push	0x31			; char '1'
-	call	_putchar
-	pop	eax
-
-;	push	word [ticks]
-;	push	numbertxt
-;	call	kprintf	
-;	pop	eax
-;	pop	ebx
 .end:
 	mov	al, PIC_EOI		; EOI value
 	out	PIC1_CMD, al		; send EOI to PIC1
