@@ -65,6 +65,8 @@ extern setup_ps2
 extern setup_interrupts
 extern isr_mouse_handler
 extern isr_handler
+extern serial_init
+extern serial_print
 
 ; *******
 ; Globals
@@ -111,17 +113,37 @@ setup:
 	mov	esp, 0x7c00		; TODO:  stack starts at 0x7c00, will grow downwards 
 					; and use conventional mem (about 30 kiB) - change address to higher mem area
 	mov	ebp, esp 	
-	
+
 	push	eax			; contains magic value (magic number)
 	push	ebx			; address of multiboot structure
 	
+	call	serial_init		; init serial port (COM1) for headless output
+	push	serial_msg1
+	call	serial_print
+	pop	eax
+
 	call 	setup_pic		; init of PIC (programmable interrupt controller)
+	
+	push	serial_msg2
+	call	serial_print
+	pop	eax
 	call 	setup_interrupts	; setup interrupt service routines etc..
+	
+	push	serial_msg3
+	call	serial_print
+	pop	eax
 	call	setup_ps2		; setup the PS/2 controller
+	
+	push	serial_msg4
+	call	serial_print
+	pop	eax
 	call 	setup_vga		; 	
 	
 	sti				; enable interrupts
 	
+	push	serial_msg5
+	call	serial_print
+	pop	eax
 	call 	kmain			; call kernel main function (_kmain for testing)
 					; the arguments are added to stack above (eax, and ebx)
 
@@ -148,6 +170,7 @@ setup_vga:
 	mov	word [cursor.y], 8	; initialization of variables
 	mov	word [cursor.x], 0	; consider make them global
 	ret
+	
 global setcursor:function
 setcursor:
 	push 	ebp
@@ -461,6 +484,11 @@ section .data
 	text4		db	"Keyboard IRS called %x", 0xa, 0
 	numbertxt	db	"%d", 0xa, 0
 	hextxt		db	"0%x 0%x 0%x 0%x", 0xa, 0
+	serial_msg1	db	"[BOOT] Serial init OK", 0x0d, 0x0a, 0
+	serial_msg2	db	"[BOOT] PIC + ISR done", 0x0d, 0x0a, 0
+	serial_msg3	db	"[BOOT] PS/2 init...", 0x0d, 0x0a, 0
+	serial_msg4	db	"[BOOT] PS/2 done, VGA done", 0x0d, 0x0a, 0
+	serial_msg5	db	"[BOOT] Entering kmain", 0x0d, 0x0a, 0
 	kbpressed	db	0
 	kbdstatus	db	0	; internal keybaord status field
 	kbdchar		db	0	; the last character from keyboard

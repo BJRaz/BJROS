@@ -66,9 +66,10 @@ void ISR_FUNC isr_handler(const uint32_t arg)
 // *******
 void ISR_FUNC isr_mouse_handler()
 {
-	kprintf("Reads mousedata\n");
-	uint8_t response = ps2_controller_read_data(); 
-	kprintf("mouse... 0x%x\n", response);
+	if (ps2_output_buffer_status()) {
+		uint8_t response = inb(PS2_DATA);
+		kprintf("mouse... 0x%x\n", response);
+	}
 	outb(PIC1_CMD, PIC_EOI);
 	outb(PIC2_CMD, PIC_EOI);
 	i_return;

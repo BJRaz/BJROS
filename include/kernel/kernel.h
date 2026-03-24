@@ -53,8 +53,8 @@ extern "C" {
 	extern uint32_t isr_division_by_zero;	// division by zero interrupt handler
 	extern uint32_t isr_mouse;		// mouse interrupt handler - wraps isr_mouse_handler
 	extern uint32_t isr;	
-	extern uint8_t inb(uint8_t reg);		// get byte from memory register reg
-	extern void outb(uint8_t reg, uint8_t byte);	// write byte to memory register reg
+	extern uint8_t inb(uint16_t reg);		// get byte from I/O port
+	extern void outb(uint16_t reg, uint8_t byte);	// write byte to I/O port
 	
 #ifdef __cplusplus
 }

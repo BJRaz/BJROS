@@ -13,6 +13,7 @@
 #include <standard/stddef.h>
 #include <standard/stdio.h>
 #include <standard/string.h>
+#include <serial.h>
 
 #define VIDEO	0xB8000			// VGA color text buffer (mode 3)
 #define VIDEO_X	80
@@ -44,6 +45,11 @@ char _getchar(void) {
 
 void _putchar(char c) 
 {
+	// Mirror all output to serial port for headless mode
+	if(c == '\n')
+		serial_putchar('\r');
+	serial_putchar(c);
+
 	if(c == '\n')
 	{
 newline:

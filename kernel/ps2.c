@@ -1,20 +1,33 @@
 #include <ps2.h>
 
+// PS/2 timeout constants (in iterations)
+// Adjust these if needed based on system speed
+#define PS2_TIMEOUT_ITERATIONS 100000
+
 void ps2_controller_send_command(uint8_t command)
 {
-	while(inb(PS2_CMD) & 0x2);	// 
+	uint32_t timeout = PS2_TIMEOUT_ITERATIONS;
+	while(timeout > 0 && (inb(PS2_CMD) & 0x2)) {	// wait for input buffer empty
+		timeout--;
+	}
 	outb(PS2_CMD, command); 
 }
 
 void ps2_controller_write_data(uint8_t data) 
 {
-	while(inb(PS2_CMD) & 0x2);	//	 
+	uint32_t timeout = PS2_TIMEOUT_ITERATIONS;
+	while(timeout > 0 && (inb(PS2_CMD) & 0x2)) {	// wait for input buffer empty
+		timeout--;
+	}
 	outb(PS2_DATA, data); 
 }
 
 uint8_t ps2_controller_read_data()
 {
-	while(!(inb(PS2_CMD) & 0x1));	//
+	uint32_t timeout = PS2_TIMEOUT_ITERATIONS;
+	while(timeout > 0 && !(inb(PS2_CMD) & 0x1)) {	// wait for output buffer full
+		timeout--;
+	}
 	return inb(PS2_DATA);
 }
 
