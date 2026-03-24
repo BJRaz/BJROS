@@ -1,6 +1,8 @@
 # BJROS Copilot Instructions
 
 BJROS is an experimental x86-32 bare-metal OS kernel written in C and NASM assembly. It targets 32-bit protected mode with a flat memory model and is multiboot-compliant (GRUB2 bootable).
+The kernel is a microkernel in ring 0
+
 
 ## Build & Run
 
@@ -33,7 +35,9 @@ cd tests && ./test  # Run tests manually after building
 
 ## Architecture
 
-Boot flow: GRUB2 → `nasm/multiboot.asm` (multiboot header, entry point) → `kernel/k.c` (`kmain`) → hardware init → idle loop.
+Boot flow: GRUB2 → `nasm/multiboot.asm` (multiboot header, entry point) → `kernel/kernel.c` (`kmain`) → hardware init → scheduler → idle loop.
+
+**Design:** Microkernel-inspired with round-robin preemptive scheduler. Flat memory model (no MMU/paging). Console runs as a schedulable process. Keyboard input flows through ring buffers from ISR to process.
 
 **Memory layout** (from `linker.ld`):
 | Address    | Section  | Contents                        |
@@ -42,15 +46,21 @@ Boot flow: GRUB2 → `nasm/multiboot.asm` (multiboot header, entry point) → `k
 | `0x110000` | `.isr`   | Interrupt service routines      |
 | `0x200000` | `.gdt`   | Global Descriptor Table         |
 | `0x202000` | `.idt`   | Interrupt Descriptor Table      |
+| `0x300000` | heap     | `_malloc`/`_free` heap (1 MB)   |
+| `0x400000` | stacks   | Process stacks (4 KB × 8)       |
 
 **Major components:**
 - `nasm/multiboot.asm` — multiboot entry; receives bootloader info in `ebx`
 - `nasm/boundaries.asm` — exposes kernel memory boundary symbols
-- `kernel/k.c` — `kmain`: GDT/IDT init, PIC (8259) config, ISR wiring, main loop
-- `kernel/console.c` — VGA text mode driver (0xB8000), 80×25, basic input prompt
+- `kernel/kernel.c` — `kmain`: GDT/IDT init, PIC (8259) config, ISR wiring, scheduler init
+- `kernel/console.c` — console process (PID 1), reads from keyboard ring buffer, VGA output
 - `kernel/serial.c` — COM1 (0x3F8) serial driver; mirrors kernel output to serial port
 - `kernel/ps2.c` — PS/2 controller init (keyboard + mouse); ports 0x60/0x64
+- `kernel/ringbuf.c` — generic 256-byte circular ring buffer (ISR-safe single-producer/consumer)
+- `kernel/process.c` — process control block (PCB), stack allocation, process creation
+- `kernel/sched.c` — round-robin preemptive scheduler, timer-driven context switching
 - `kernel/stdio/` — `kprintf`, `kprintln`, integer/string conversions
+- `kernel/stdio/malloc.c` — `_malloc()`/`_free()` first-fit heap allocator
 - `src/libc/` — freestanding libc (string, stdio); used by tests and kernel
 - `tests/` — host-compiled unit tests for libc functions (not kernel tests)
 

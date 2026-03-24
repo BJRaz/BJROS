@@ -335,29 +335,27 @@ isr_division_by_zero:
 	iret
 ; ***************************
 ; Timer - handles the clockinterrupts
+; Calls schedule() for round-robin context switching.
 ; ***************************
+extern schedule
 global isr_timer:function
 isr_timer:
 	cli
 	pushad
-	
-	xor 	eax, eax
-	xor 	ebx, ebx
-	xor	edx, edx
-	mov 	eax, [ticks]
-	inc 	eax
-	mov	[ticks], eax	
-	mov	ebx, 0x12		; divide by 18 (18 times a second) 
-					; TODO: this leeds to inaccurate timing as PIT ticks at 18.2 times a second
-					; if used to represent time-ticks
-	div	ebx			; qoutient = eax, remainder = edx .. explain
-.end:
-	mov	al, PIC_EOI		; EOI value
-	out	PIC1_CMD, al		; send EOI to PIC1
-	mov	al, PIC_EOI		; EOI value
-	out	PIC2_CMD, al		; send EOI to PIC1
+
+	; Send EOI early so PIC accepts further interrupts
+	mov	al, PIC_EOI
+	out	PIC1_CMD, al
+	mov	al, PIC_EOI
+	out	PIC2_CMD, al
+
+	; Call schedule(old_esp) — returns new_esp
+	push	esp			; pass current ESP as argument
+	call	schedule
+	mov	esp, eax		; switch to the returned stack
+
 	popad
-	sti				; restore interrupts
+	sti
 	iret
 ; ****************************
 ; Keyboard handler PS/2 (i8042)
@@ -373,6 +371,7 @@ isr_timer:
 ;
 ; ****************************
 global isr_keyboard:function
+extern kbd_input_ringbuf_put
 isr_keyboard: 				
 	cli
 	pushad
@@ -412,6 +411,10 @@ isr_keyboard:
 	mov	eax, [kbdarray_upper+ebx]
 .makedone:
 	mov	byte [kbdchar], al
+	; Push translated character to ring buffer for console process
+	push	eax
+	call	kbd_input_ringbuf_put
+	add	esp, 4
 .break:
 	cmp	ebx, 0xAA		; L-shift released
 	je	.shiftup

@@ -55,7 +55,7 @@ LINK_CC_ARCH = -m32
 
 OBJDIR:=bin/x86
 #OBJS:=$(addprefix $(OBJDIR)/, multiboot.so string.o cursor.so print.o console.o ps2.o kernel.o) 
-OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so strcmp.so print.o console.o string.o serial.o ps2.o kernel.o) 
+OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so strcmp.so print.o console.o string.o serial.o ps2.o ringbuf.o malloc.o process.o sched.o kernel.o) 
 BUILDDIR=build/x86
 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...

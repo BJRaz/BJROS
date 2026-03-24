@@ -17,6 +17,8 @@
 	void _scrollup(void);
 	void _clear();
 	void* _memset(void* buffer, unsigned char c, int size);
+	void* _malloc(unsigned int size);
+	void  _free(void* ptr);
 
 #endif
 

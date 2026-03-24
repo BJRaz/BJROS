@@ -4,10 +4,11 @@
 #include <multiboot.h>
 #include <console.h>
 #include <ps2.h>
+#include <sched.h>
+#include <process.h>
+#include <ringbuf.h>
 
 extern void interrupt();		// this function calls software interrupt
-extern char* kbd_rb;			// keyboard ring buffer 
-extern uint8_t kbd_rb_head, kbd_rb_tail;// keyboard ring buffer head, and tail addresses
 
 	
 void callback(const char*);
@@ -20,31 +21,6 @@ struct interrupt_gate_descriptor* idt_array;
 struct multiboot_info* mb_info;
 
 
-// Keyboard test ISR
-// 
-void ISR_FUNC isr_keyboard_handler(const void *arg)
-{
-	struct isrstackframe *frame = ISRSTACK(&arg);
-	// TODO: store all relevant regs in stack
-	// check stack segment etc.
-	char command = inb(PS2_CMD);	
-	char scancode = inb(PS2_DATA);	
-	// ring buffer test code...
-	
-	if(kbd_rb_head < 10)
-		kbd_rb[kbd_rb_head++] = scancode;
-	else
-		interrupt();
-	
-	kprintf("0x%x, 0x%x, %x\n", scancode, scancode & 0x000000FF, &kbd_rb);
-	kprintf("EIP: 0x%x, CS: 0x%x, FLAGS: 0x%x\n", frame->EIP, frame->CS, frame->EFLAGS);
-
-	if(scancode == 0x2a)
-		kprintf("Shift is pressed");
-	outb(PIC1_CMD, PIC_EOI);				// send EOI to PIC 1
-	outb(PIC2_CMD, PIC_EOI);				// send EOI to PIC 2
-	i_return;
-}
 // test ISR
 // interrupt 2dH
 // Called from interrupt handler wrapper
@@ -253,13 +229,29 @@ extern "C" {
 	{
 		mb_info = multiboot_structure;
 		mv = magicvalue;
-		_clear();		
-		prompt(callback);
+		_clear();
+
+		/* Initialize ring buffers */
+		ringbuf_init(&kbd_input_rb);
+
+		/* Initialize scheduler (creates idle process as PID 0) */
+		sched_init();
+
+		/* Create console process (PID 1) */
+		console_set_callback(callback);
+		struct process *console_proc = process_create(console_main);
+		sched_add(console_proc);
+
+		kprintln("BJROS microkernel started.");
+		kprintln("Console process created (PID 1).");
+
+		/* Fall through to idle — scheduler takes over via timer ISR */
+		i_sti;
+		for (;;)
+			halt;
 		
 		return 0;	
 	}
 #ifdef __cplusplus
 }
 #endif
-
-
