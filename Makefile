@@ -59,7 +59,7 @@ OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so uto
 BUILDDIR=build/x86
 
 VPATH=kernel:kernel/stdio:nasm:tests/stdio		# make searchdirs variable...
-vpath %.h include 								# search for specific filetypes in <dir>
+vpath %.h include:include/multiboot 								# search for specific filetypes in <dir>
 
 all: $(BUILDDIR)/kernel.elf TAGS
 

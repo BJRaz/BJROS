@@ -78,7 +78,7 @@ newline:
 		goto newline;
 }
 
-void _putchar_new(char c) 
+/*void _putchar_new(char c) 
 {
 	if(c == '\n')
 	{
@@ -110,7 +110,7 @@ void _putchar_new(char c)
 		_scrollup();
 		video = (unsigned char*)0xb8f00;
 	}
-} 
+} */
 
 int kprint(const char* text) {
 	//__asm__(".intel_syntax noprefix");
