@@ -163,4 +163,4 @@ $(OBJ_DIR)/libc.o:
 	cp src/libc/libc.o $(OBJ_DIR)/libc.o
 
 tests:	$(OBJS) $(OBJ_DIR)/libc.o	
-	cd tests && $(MAKE)
+	cd tests && $(MAKE) tests
