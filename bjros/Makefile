@@ -6,6 +6,8 @@ ifeq ($(CC),cc)
 		CC := i386-elf-gcc
 	endif
 endif
+
+# Compiler flags for kernel (32-bit protected mode, bare metal)
 CFLAGS=-nostdinc 			\
 	-Wpadded 				\
 	-std=c99 				\
@@ -16,68 +18,78 @@ CFLAGS=-nostdinc 			\
 	-fno-stack-protector 	\
 	-Iinclude/kernel 		\
 	-Iinclude/multiboot 	
+
 AS=nasm
 ASFLAGS=-felf32 
 
+# Debug and release build variants
 ifeq ($(DEBUG), 1)
 	CFLAGS := $(CFLAGS) -g
 	ASFLAGS := $(ASFLAGS) -Fdwarf
+	BUILD_TYPE=debug
+else
+	BUILD_TYPE=release
 endif
 
+# Clang-specific settings
 ifeq ($(CC), clang)
 	CFLAGS := $(CFLAGS) -arch i386 		\
 			-target i386-pc-none-elf 	\
 			-v							\
-			-nobuiltininc	# clang specific option
+			-nobuiltininc
 endif
 
+# Linker configuration
 LD ?= i386-elf-ld
 ifeq ($(LD),ld)
 	ifneq ($(shell command -v i386-elf-ld 2>/dev/null),)
 		LD := i386-elf-ld
 	endif
 endif
+
 LD_ARCH_FLAG = -m elf_i386
 LD_FLAGS = -L bin \
 	-T linker.ld \
 	-static \
 	-z muldefs
 
-# When linking with the compiler driver we need an architecture flag suitable
-# for gcc (use -m32); when using the raw cross-linker we use the ld-specific
-# `-m elf_i386` flag.
+# Linker selection: use raw ld on Linux (avoids libc injection), 
+# use compiler driver on macOS if cross-linker unavailable
 LINK_CC_ARCH = -m32 
-# **** 
-# C++ settings
-# LDFLAGS=-m elf_i386 -T linker.ld -lstdc++ -L /usr/lib/gcc/i686-redhat-linux/10 --static #/usr/lib/crt1.o 
-# ****
  
+# Directories
+OBJ_DIR:=../bin/x86
+BUILD_DIR=../build/x86
 
-OBJDIR:=../bin/x86
-BUILDDIR=../build/x86
-OBJS:=$(addprefix $(OBJDIR)/, multiboot.so cursor.so atoi.so atou.so itoa.so utoa.so utox.so strlen.so strcmp.so print.o console.o string.o serial.o ps2.o ringbuf.o malloc.o process.o sched.o kernel.o) 
+# Object files: assembly and C sources
+# Note: Assembly objects use .o extension (not .so, which is for shared libraries)
+OBJS:=$(addprefix $(OBJ_DIR)/, \
+	multiboot.o cursor.o atoi.o atou.o itoa.o utoa.o utox.o strlen.o strcmp.o \
+	print.o console.o string.o serial.o ps2.o ringbuf.o malloc.o process.o sched.o kernel.o) 
 
-VPATH=kernel:kernel/stdio:kernel/nasm:tests/stdio		# make searchdirs variable...
-vpath %.h include:include/multiboot 								# search for specific filetypes in <dir>
+VPATH=kernel:kernel/stdio:kernel/nasm:tests/stdio
+vpath %.h include:include/multiboot 
 
-all: $(BUILDDIR)/kernel.elf TAGS
+# Build targets
+all: $(BUILD_DIR)/kernel.elf TAGS
 
-$(OBJS): | $(OBJDIR)							# order-only prerequisite
+$(OBJS): | $(OBJ_DIR)							# order-only prerequisite
 
-# had to make this rule match *.so (shared object) 
-# when referencing assembly files
-$(OBJDIR)/%.so: %.asm
+# Assembly rule: compile .asm files to .o objects
+$(OBJ_DIR)/%.o: %.asm
 	$(AS) $(ASFLAGS) $< -o $@
-# this matches all c-files
-$(OBJDIR)/%.o: %.c
+
+# C compilation rule: compile .c files to .o objects
+$(OBJ_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
+# Directory creation
+$(OBJ_DIR):
+	-mkdir -p $(OBJ_DIR) 
+$(BUILD_DIR):
+	-mkdir -p $(BUILD_DIR)
 
-$(OBJDIR):
-	-mkdir -p $(OBJDIR) 
-$(BUILDDIR):
-	-mkdir -p $(BUILDDIR)
-
+# Platform-specific linker selection
 OS := $(shell uname -s)
 
 # On Linux we must call the linker (ld) explicitly; using the compiler driver
@@ -96,24 +108,59 @@ LINKFLAGS := $(LINK_CC_ARCH) $(LD_FLAGS)
 endif
 endif
 
-$(BUILDDIR)/kernel.elf: $(OBJS) | $(BUILDDIR)
+# Kernel ELF build target
+$(BUILD_DIR)/kernel.elf: $(OBJS) | $(BUILD_DIR)
 	@echo "Linker: $(LINKER)"
-	$(LINKER) $(LINKFLAGS) $^ -o $(BUILDDIR)/kernel.elf
+	$(LINKER) $(LINKFLAGS) $^ -o $(BUILD_DIR)/kernel.elf
 	-mbchk $@
 clean:
 	-rm -f tests/test 
-	-rm -rf $(OBJDIR) $(BUILDDIR)
-	#-cd grub2 && $(MAKE) clean
+	-rm -rf $(OBJ_DIR) $(BUILD_DIR)
 	-cd tests && $(MAKE) clean
 	-cd src/libc && $(MAKE) clean
+
+# Tags generation for editor navigation (ctags)
 TAGS:	
-	ctags --exclude=kernel/k.c --exclude=jail/ -R .
-export CC CFLAGS AS ASFLAGS OBJS OBJDIR
+	ctags --exclude=build/ --exclude=bin/ --exclude=*.so -R .
 
-.PHONY:	tests TAGS #grub2
+# Phase 2: Build variants and information targets
+.PHONY: debug release info show-config tests TAGS
 
-$(OBJDIR)/libc.o: 
+# Debug build: compiles with -g symbols for GDB
+debug: DEBUG=1
+debug: all
+
+# Release build: stripped, optimized (future enhancement)
+release: CFLAGS += -O2
+release: all
+
+# Display build configuration
+info:
+	@echo "BJROS Kernel Build Configuration"
+	@echo "================================="
+	@echo "Build Type:  $(BUILD_TYPE)"
+	@echo "Compiler:    $(CC) ($(shell $(CC) --version | head -1))"
+	@echo "Assembler:   $(AS)"
+	@echo "Linker:      $(LINKER)"
+	@echo "Platform:    $(OS)"
+	@echo ""
+	@echo "CFLAGS:      $(CFLAGS)"
+	@echo "ASFLAGS:     $(ASFLAGS)"
+	@echo "LD_FLAGS:    $(LINKFLAGS)"
+	@echo ""
+	@echo "Object Dir:  $(OBJ_DIR)"
+	@echo "Build Dir:   $(BUILD_DIR)"
+	@echo "Output:      $(BUILD_DIR)/kernel.elf"
+
+# Show build system configuration
+show-config: info
+
+# Phase 3: Libc and tests support
+export CC CFLAGS AS ASFLAGS OBJS OBJ_DIR
+
+$(OBJ_DIR)/libc.o: 
 	cd src/libc && $(MAKE)
-	cp src/libc/libc.o $(OBJDIR)/libc.o
-tests:	$(OBJS) $(OBJDIR)/libc.o	
+	cp src/libc/libc.o $(OBJ_DIR)/libc.o
+
+tests:	$(OBJS) $(OBJ_DIR)/libc.o	
 	cd tests && $(MAKE)
