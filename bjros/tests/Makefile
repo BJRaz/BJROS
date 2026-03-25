@@ -14,4 +14,4 @@ tests: $(LIBC_OBJS) stdio/itoa.c
 	$(CC) -I.. -g stdio/itoa.c $(LIBC_OBJS) -o test
 
 clean:
-	-rm test $(LIBC_OBJS) test_stubs.c
+	-rm test $(LIBC_OBJS)
