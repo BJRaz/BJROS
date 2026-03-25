@@ -8,7 +8,7 @@ KERNEL=$(BUILDDIR)/kernel.elf
 
 all:	$(ISO)
 
-$(ISO):	$(KERNEL) | $(ISO_DIR)
+$(ISO):	$(ISO_DIR)
 	cp $(KERNEL) $(ISO_DIR)/boot/kernel.elf       		
 	-cp -p grubiso.cfg $(ISO_DIR)/boot/grub/grub.cfg
 	grub2-mkrescue -o $(ISO) $(ISO_DIR)

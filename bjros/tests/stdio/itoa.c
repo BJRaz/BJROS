@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "include/libc/string.h"
 #include "include/libc/stdio.h"
-#include "include/kernel/console.h"
+//#include "include/kernel/console.h"  // Not needed for host tests
 
 #define DEBUG
 
