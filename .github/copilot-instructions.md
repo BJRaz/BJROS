@@ -1,23 +1,47 @@
 # BJROS Copilot Instructions
 
 BJROS is an experimental x86-32 bare-metal OS kernel written in C and NASM assembly. It targets 32-bit protected mode with a flat memory model and is multiboot-compliant (GRUB2 bootable).
-The kernel is a microkernel in ring 0
+The kernel is a microkernel in ring 0.
+
+## Project Structure
+
+```
+bjros/                         # Kernel and core OS code
+├── kernel/                    # Kernel source (kernel.c, console.c, scheduler, etc.)
+├── nasm/                      # Assembly source (multiboot.asm, ISRs, etc.)
+├── include/kernel/            # Kernel headers
+├── include/multiboot/         # Multiboot headers
+├── src/libc/                  # Freestanding libc (string, stdio, stdlib functions)
+├── include/libc/              # Libc headers
+├── tests/                     # Host-compiled unit tests (test libc functions)
+├── user/                      # User-space programs (TO BE IMPLEMENTED)
+├── linker.ld                  # Kernel linker script
+└── Makefile                   # Kernel build configuration
+```
+
+**Note:** The kernel resides in `bjros/` subdirectory. All kernel paths in this document are relative to `bjros/` or absolute from root.
 
 
 ## Build & Run
+
+**Build commands (run from repository root):**
 
 ```bash
 make              # Build kernel ELF → build/x86/kernel.elf
 make grub2        # Build bootable ISO → grub2/os.iso
 make clean        # Remove all build artifacts
-make TAGS         # Regenerate ctags
+make TAGS         # Regenerate ctags (in bjros/)
 DEBUG=1 make      # Build with -g debug symbols
 ```
 
+**Run tests (host-compiled unit tests in bjros/tests/):**
+
 ```bash
-make tests        # Build test executables in tests/
-cd tests && ./test  # Run tests manually after building
+make tests        # Build test executables in bjros/tests/
+cd bjros/tests && ./test  # Run tests manually after building
 ```
+
+**Boot in QEMU:**
 
 ```bash
 ./scripts/run-qemu-iso.sh             # Boot ISO in QEMU (headless, serial to stdout)
@@ -35,11 +59,11 @@ cd tests && ./test  # Run tests manually after building
 
 ## Architecture
 
-Boot flow: GRUB2 → `nasm/multiboot.asm` (multiboot header, entry point) → `kernel/kernel.c` (`kmain`) → hardware init → scheduler → idle loop.
+Boot flow: GRUB2 → `bjros/nasm/multiboot.asm` (multiboot header, entry point) → `bjros/kernel/kernel.c` (`kmain`) → hardware init → scheduler → idle loop.
 
 **Design:** Microkernel-inspired with round-robin preemptive scheduler. Flat memory model (no MMU/paging). Console runs as a schedulable process. Keyboard input flows through ring buffers from ISR to process.
 
-**Memory layout** (from `linker.ld`):
+**Memory layout** (from `bjros/linker.ld`):
 | Address    | Section  | Contents                        |
 |------------|----------|---------------------------------|
 | `0x100000` | `.text`  | Kernel code                     |
@@ -49,7 +73,7 @@ Boot flow: GRUB2 → `nasm/multiboot.asm` (multiboot header, entry point) → `k
 | `0x300000` | heap     | `_malloc`/`_free` heap (1 MB)   |
 | `0x400000` | stacks   | Process stacks (4 KB × 8)       |
 
-**Major components:**
+**Major components** (in `bjros/`):
 - `nasm/multiboot.asm` — multiboot entry; receives bootloader info in `ebx`
 - `nasm/boundaries.asm` — exposes kernel memory boundary symbols
 - `kernel/kernel.c` — `kmain`: GDT/IDT init, PIC (8259) config, ISR wiring, scheduler init
@@ -63,6 +87,7 @@ Boot flow: GRUB2 → `nasm/multiboot.asm` (multiboot header, entry point) → `k
 - `kernel/stdio/malloc.c` — `_malloc()`/`_free()` first-fit heap allocator
 - `src/libc/` — freestanding libc (string, stdio); used by tests and kernel
 - `tests/` — host-compiled unit tests for libc functions (not kernel tests)
+- `user/` — user-space programs (reserved for future development)
 
 The `.isr` section is placed at a fixed address so ISR function pointers can be hardcoded. Mark ISR functions with `ISR_FUNC` (`__attribute__((__section__(".isr")))`).
 
@@ -79,7 +104,7 @@ The `.isr` section is placed at a fixed address so ISR function pointers can be 
 struct PACKED gdtr_register { ... };  // PACKED = __attribute__((packed))
 ```
 
-**Inline assembly macros** (defined in `include/kernel/kernel.h`):
+**Inline assembly macros** (defined in `bjros/include/kernel/kernel.h`):
 ```c
 #define i_cli  __asm__("cli");
 #define i_sti  __asm__("sti");
@@ -92,11 +117,22 @@ Use these macros rather than raw `__asm__` strings for common instructions.
 while (inb(PS2_CMD) & 0x2) {}  // wait for input buffer empty
 ```
 
-**No standard library:** `#include` paths use `include/kernel` and `multiboot`. There is no libc available in kernel code — only the custom freestanding implementations in `src/libc/` and `kernel/stdio/`.
+**No standard library:** `#include` paths use `include/kernel` and `multiboot` (relative to `bjros/`). There is no libc available in kernel code — only the custom freestanding implementations in `bjros/src/libc/` and `bjros/kernel/stdio/`.
 
-**Headers:** Kernel headers live in `include/kernel/` and `include/kernel/standard/`. Libc headers are in `include/libc/`. The compiler is invoked with `-Iinclude/kernel -Imultiboot`.
+**Headers:** Kernel headers live in `bjros/include/kernel/` and `bjros/include/kernel/standard/`. Libc headers are in `bjros/include/libc/`. The compiler is invoked with `-Iinclude/kernel -Imultiboot` (from within `bjros/`).
 
-**Tests** are standalone host binaries (compiled without `-ffreestanding`) that test `src/libc/` functions in isolation. They are not run inside the kernel or QEMU.
+**Tests** are standalone host binaries (compiled without `-ffreestanding`) that test `bjros/src/libc/` functions in isolation. They are not run inside the kernel or QEMU. Build and run with `make tests` from root, then `cd bjros/tests && ./test`.
+
+## User-Space Programs
+
+**Directory:** `bjros/user/`
+
+Currently reserved for user-space applications that will run in ring 3 (unprivileged mode). Planned features:
+- User-space processes spawned by the kernel scheduler
+- System calls to kernel services (IPC, memory management, etc.)
+- Separation from kernel-space code and headers
+
+Build configuration for user-space programs will be added as they are developed.
 
 ## Debugging & Tools
 
@@ -105,3 +141,8 @@ while (inb(PS2_CMD) & 0x2) {}  // wait for input buffer empty
 - GDB tools: `connect`, `continue`, `interrupt`, `break`, `delete_breakpoint`, `breakpoints`, `step`, `step_instruction`, `next`, `next_instruction`, `registers`, `memory`, `backtrace`, `disassemble`, `symbols`, `eval`
 
 Dependencies: `mcp` (MCP SDK), `pygdbmi` (GDB/MI parser). See `tools/mcp-qemu/README.md` for setup and usage.
+
+**Kernel Source Structure:** Code is organized in `bjros/` for easy navigation:
+- Kernel entry and core logic: `bjros/kernel/`
+- Assembly routines: `bjros/nasm/`
+- Build artifacts: `build/x86/` (kernel.elf) and `grub2/os.iso` (bootable ISO)
