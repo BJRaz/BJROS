@@ -1,8 +1,5 @@
 #include <console.h>
 
-/* Global keyboard ring buffer — keyboard ISR writes, console reads */
-struct ringbuf kbd_input_rb;
-
 static void (*cmd_callback)(const char*) = 0;
 
 /* Called from keyboard ISR (assembly) to push a character into the ring buffer */
