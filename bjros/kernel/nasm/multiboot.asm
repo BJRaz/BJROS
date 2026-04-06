@@ -120,30 +120,32 @@ setup:
 	call	serial_init		; init serial port (COM1) for headless output
 	push	serial_msg1
 	call	serial_print
-	pop	eax
+	pop	eax			; TODO: why ?
 
 	call 	setup_pic		; init of PIC (programmable interrupt controller)
 	
 	push	serial_msg2
 	call	serial_print
-	pop	eax
+	pop	eax			; TODO: why?
 	call 	setup_interrupts	; setup interrupt service routines etc..
 	
 	push	serial_msg3
 	call	serial_print
-	pop	eax
+	pop	eax			; TODO: why?
 	call	setup_ps2		; setup the PS/2 controller
 	
 	push	serial_msg4
 	call	serial_print
-	pop	eax
+	pop	eax			; TODO: why?
 	call 	setup_vga		; 	
 	
-	sti				; enable interrupts
 	
 	push	serial_msg5
 	call	serial_print
-	pop	eax
+	pop	eax			; TODO: why?
+	
+	sti				; enable interrupts
+	
 	call 	kmain			; call kernel main function (_kmain for testing)
 					; the arguments are added to stack above (eax, and ebx)
 
@@ -175,11 +177,11 @@ global setcursor:function
 setcursor:
 	push 	ebp
 	mov 	ebp, esp
-	push	eax
+	push	eax			; save EAX - needed ?
 	push	ebx
 	
-	mov	word bx, [ebp+8]
-	mov	word ax, [ebp+12]
+	mov	word bx, [ebp+8]	; used by cursor routine
+	mov	word ax, [ebp+12]	; 	 
 	call 	cursor
 
 	pop	ebx

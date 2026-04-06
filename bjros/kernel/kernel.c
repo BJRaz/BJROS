@@ -8,18 +8,6 @@
 #include <process.h>
 #include <ringbuf.h>
 
-extern void interrupt();		// this function calls software interrupt
-
-	
-void callback(const char*);
-void test();
-void help();
-void recursive(int i);
-
-void* mv;						// pointer to the magicvalue
-struct interrupt_gate_descriptor* idt_array;
-struct multiboot_info* mb_info;
-
 
 // test ISR
 // interrupt 2dH
@@ -101,82 +89,6 @@ void setup_interrupts()
 	set_isr_entry(44, &isr_mouse_handler);			// slot (12) - mouse PS/2
 	set_isr_entry(45, &isr_handler);			// slot (13) - custom ISR for software INT test
 }
-
-void showidtinfo(const struct interrupt_gate_descriptor* idt_array) 
-{ 
-	kprintf("IDT current entry address: 0x%x\n", &idt_array->offset_lo);
-	kprintf("IDT offset_lo: 0x%x\n", idt_array->offset_lo);
-	kprintf("IDT segment: 0x%x\n", idt_array->segment_selector);
-	kprintf("IDT fill: 0x%x\n", idt_array->fill);
-	kprintf("IDT flags: 0x%x\n", idt_array->flags);
-	kprintf("IDT offset_hi: 0x%x\n", idt_array->offset_hi);
-}
-
-// Shows the multiboot info
-void showmbinfo() 
-{
-	kprintf("MEMORY\n");
-	kprintf("multiboot info address: 0x%x\n", mb_info); 
-	kprintf("multiboot info cmdline: %s\n", 
-		mb_info->cmdline);
-	kprintf("multiboot info memlower (decimal): %dkb, memupper: %dkb\n", 
-		mb_info->mem_lower, 
-		mb_info->mem_upper);
-	kprintf("multiboot magic header %x\n", mv);
-}
-
-int sysinfo() 
-{
-	int len = 0;
-	char* text = "****** BJROS v0.2 ******\nWelcome to BJROS ...\n";
-	len = kprint(text);
-	kprintf("HER: %d\n", len);
-	#ifdef __cplusplus
-		Sysinfo s;	// = new Sysinfo();
-		kprintf("Sysinfo obj: %d\n", s.getTest());
-	#endif
-	// IDT stuff
-	kprintf("PIC1: 0x%x\n", inb(PIC1_DATA));
-	kprintf("PIC2: 0x%x\n", inb(PIC2_DATA));
-
-	showidtinfo(idt_array);	
-	kprintf("Interrupt gate descriptor baseaddress: 0x%x, %d\n", &idt, &idt);
-	kprintf("ISR test (INT 45) address: 0x%x\n", &isr);
-	kprintf("ISR address div by zero: 0x%x\n", &isr_division_by_zero);
-	// GDT stuff:	
-	struct gdtr_register *gdtreg = (struct gdtr_register*) &gdtr;
-	kprintf("GDTR address: 0x%x\n", &gdtr);
-	kprintf("GDTR limit value: 0x%x\n", gdtreg->limit);
-	kprintf("GDTR baseaddress value: 0x%x\n", gdtreg->baseaddress);
-	// Memory stuff
-	showmbinfo();
-	return len;
-
-}
-
-void test_malloc() 
-{
-	char* str = _malloc(sizeof(char*));
-	kprintf("malloc returned: 0x%x\n", str);
-	if (str) {
-		str[0] = 'H'; str[1] = 'i'; str[2] = '\0';
-		kprintf("String: %s\n", str);
-		_free(str);
-		kprintf("free OK\n");
-	}
-} 
-
-void test() 
-{
-	int number = 32;
-	for(int i=0;i<number;i++){
-		kprintf("Number: %d", i);
-	}
-
-	int calculation = 10 / 0;
-	kprintf("Calc: %d\n", calculation);
-}
-
 void callback(const char* buf) 
 {
 	if(_strcmp("multiboot", buf) == 0)
@@ -216,51 +128,28 @@ void callback(const char* buf)
 		kprintf("Command not found: %s\n", buf);
 }
 
-void help() 
+int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) 
 {
-	kprintln("int - calls software interrupt");
-	kprintln("multiboot - shows multiboot parameters");
-	kprintln("test - test program");
-	kprintln("test_malloc - test heap allocator");
-	kprintln("sysinfo - show system info");
-	kprintln("clear - clears screen");
-	kprintln("help - this help..");
+	mb_info = multiboot_structure;
+	mv = magicvalue;
+	_clear();
+	/* Initialize ring buffers */
+	ringbuf_init(&kbd_input_rb);
+
+	/* Initialize scheduler (creates idle process as PID 0) */
+	sched_init();
+
+	/* Create console process (PID 1) */
+	console_set_callback(callback);
+	struct process *console_proc = process_create(console_main);
+	sched_add(console_proc);
+
+	kprintln("BJROS microkernel started.");
+	kprintln("Console process created (PID 1).");
+
+	/* Scheduler takes over via timer ISR.
+	 * Return to mainhalt: in multiboot.asm (hlt + jmp loop). */
+	i_sti;
+	return 0;	
 }
 
-void recursive(int i) 
-{
-	kprintf("tal: %d\n", i++);
-	recursive(i);
-}
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-	int kmain(struct multiboot_info* multiboot_structure, void* magicvalue) 
-	{
-		mb_info = multiboot_structure;
-		mv = magicvalue;
-		_clear();
-
-		/* Initialize ring buffers */
-		ringbuf_init(&kbd_input_rb);
-
-		/* Initialize scheduler (creates idle process as PID 0) */
-		sched_init();
-
-		/* Create console process (PID 1) */
-		console_set_callback(callback);
-		struct process *console_proc = process_create(console_main);
-		sched_add(console_proc);
-
-		kprintln("BJROS microkernel started.");
-		kprintln("Console process created (PID 1).");
-
-		/* Scheduler takes over via timer ISR.
-		 * Return to mainhalt: in multiboot.asm (hlt + jmp loop). */
-		i_sti;
-		return 0;	
-	}
-#ifdef __cplusplus
-}
-#endif
