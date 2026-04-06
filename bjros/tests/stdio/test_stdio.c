@@ -1,17 +1,19 @@
 // Brian Juul Rasmussen 2020
 //
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include "include/libc/string.h"
+#include <stdio.h>						// include from kernel/standard/stdio.h
+#include <string.h>						// include from kernel/standard/string.h
+#include <stdint.h>						// include from kernel/standard/stdint.h	
+
+#include "include/libc/string.h"		// libc includes for user-space tests
 #include "include/libc/stdio.h"
 //#include "include/kernel/console.h"  // Not needed for host tests
 
 #define DEBUG
 
 void printverylong();
-int _kprintf(const char* format, ...);
+//int _kprintf(const char* format, ...);
 void testuinttohex(uint32_t number);
+void test_strcmp();
 /*
 // TODO: optimize
 void* _memset(void* buffer, const unsigned char c, int size) {
@@ -40,19 +42,12 @@ int main(int argc, char** argv)
 	printverylong();
 	
 	testuinttohex(100);
-	return 0;
+
+    test_strcmp();
+
+	
+    return 0;
 /*
-	char s[2];
-       	s[0] = 'B';
-	s[1] = 'r';
-	const char* st1 = "Brian";
-	const char* st2 = "Brian";
-	if(_strcmp(st1, s) != 0) 
-		puts("Not equal strings");
-	else
-		puts("Equal strings");
-
-
 	prompt(mycallback);
 
 	char* text1 = "Brian tester: 0x%x, 0x%x hest\n";
@@ -96,6 +91,19 @@ int main(int argc, char** argv)
 	_kprintf("Her: %d\n", 200);
 	return result;
 	*/
+}
+
+void test_strcmp()
+{
+    char s[2];
+    s[0] = 'B';
+    s[1] = 'r';
+    const char *st1 = "Brian";
+    const char *st2 = "Brian";
+    if (_strcmp(st1, st2) != 0)
+        puts("Not equal strings");
+    else
+        puts("Equal strings");
 }
 
 void testuinttohex(uint32_t number)

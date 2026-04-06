@@ -10,8 +10,8 @@ test_%.o: ../src/libc/%.c
 test_stubs.o: test_stubs.c
 	$(CC) $(CFLAGS) $< -o $@
 
-tests: $(LIBC_OBJS) stdio/itoa.c
-	$(CC) -I.. -g stdio/itoa.c $(LIBC_OBJS) -o test
+tests: $(LIBC_OBJS) stdio/test_stdio.c
+	$(CC) -I.. -g stdio/test_stdio.c $(LIBC_OBJS) -o test
 
 clean:
 	-rm test $(LIBC_OBJS)

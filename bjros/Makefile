@@ -121,7 +121,7 @@ clean:
 
 # Tags generation for editor navigation (ctags)
 TAGS:	
-	ctags --exclude=build/ --exclude=bin/ --exclude=*.so -R .
+	-ctags --exclude=build/ --exclude=bin/ --exclude=*.so -R .
 
 # Phase 2: Build variants and information targets
 .PHONY: debug release info show-config tests TAGS

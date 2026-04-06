@@ -12,6 +12,7 @@
 ;
 ;
 ; tested sep 4. 2019 in gcc program.
+; header: #include <stdio.h>
 
 section .text
 
