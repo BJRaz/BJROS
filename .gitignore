@@ -9,4 +9,5 @@ bin/
 jail/
 build/
 *.img
+*.elf
 
