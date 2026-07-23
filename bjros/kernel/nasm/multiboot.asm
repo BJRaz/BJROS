@@ -576,15 +576,15 @@ gdt:
 		dd 	0x0000ffff	; base address (00-15), segment limit (0-15)
 		db	00000000b	; base address (16-23)
 		db 	10011011b	; type(1011 = Code,execute/read), 1001 => S=1, DPL=00, P=1
-		db	11001111b	;
-		db	00000000b
-		
+		db	11001111b	; segment limit (16-19),AVL,L,D/B,G
+		db	00000000b 	; base address (24-31)
+					
 					; DATA SEGMENT DESCRIPTOR
-		dd 	0x0000ffff	; base address (16-31), segment limit (0-15)
-		db	00000000b
+		dd 	0x0000ffff	; base address (00-15), segment limit (0-15)
+		db	00000000b	; base address (16-31), segment limit (0-15)
 		db 	10010011b	; type(0011 = Data,execute/read), 1001 => S=1, DPL=00, P=1
-		db	11001111b
-		db	00000000b
+		db	11001111b	; segment limit (16-19),AVL,L,D/B,G
+		db	00000000b 	; base address (24-31)
 
 
 ; *******
